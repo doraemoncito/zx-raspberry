@@ -1,0 +1,8 @@
+title: ZX Raspberry
+description: A bare metal ZX Spectrum emulator for Raspberry Pi
+theme: jekyll-theme-minimal
+show_downloads: false
+logo: /assets/img/zx_raspberry_green_200x200.png
+remote_theme: pages-themes/minimal@v0.2.0
+plugins:
+  - jekyll-remote-theme # add this line to the plugins list if you already have one
