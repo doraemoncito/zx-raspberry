@@ -1,0 +1,225 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Create a virtual machine to Cross-compile the code for Raspberry Pi.
+
+IMAGE_NAME = "ubuntu/focal64"
+MACHINE_NAME = "raspberry-pi-cross-compiler"
+
+# Some of the USB filter checking methods are based on code originally from:
+# https://github.com/hypriot/flash/blob/master/Vagrantfile
+def which(cmd)
+    exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
+    ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
+        exts.each { |ext|
+            exe = File.join(path, "#{cmd}#{ext}")
+            return exe if File.executable?(exe) && !File.directory?(exe)
+        }
+    end
+    return nil
+end
+  
+# usbfilter_exists and better_usbfilter_add originally part of a pull request
+# https://github.com/mitchellh/vagrant/issues/5774
+def usbfilter_exists(vendor_id, product_id)
+    # Determine if a usbfilter with the provided Vendor/Product ID combination
+    # already exists on this VM.
+    # NOTE: The "machinereadable" output for usbfilters is more
+    #       complicated to work with (due to variable names including
+    #       the numeric filter index) so we don't use it here.
+    #
+    machine_id_filepath = File.join(".vagrant", "machines", MACHINE_NAME, "virtualbox", "id")
+
+    if not File.exists? machine_id_filepath
+      # VM hasn't been created yet.
+      puts "USB filter VM '#{machine_id_filepath}' has not been created yet."
+      return false
+    end
+  
+    machine_id = File.read(machine_id_filepath)
+  
+    vm_info = `VBoxManage showvminfo #{machine_id}`
+
+    # TODO: use regular expression matching to cater for changes in the number of white spaces
+    filter_match = "VendorId:                    #{vendor_id}\nProductId:                   #{product_id}\n"  
+    return vm_info.include? filter_match
+end
+  
+def usbfilter_add_if_not_exists(vb, vendor_id, product_id, filter_name, manufacturer_name, product_name)
+    # This is a workaround for the fact VirtualBox doesn't provide
+    # a way for preventing duplicate USB filters from being added.
+    #
+    # TODO: Implement this in a way that it doesn't get run multiple
+    #       times on each Vagrantfile parsing.
+    if not usbfilter_exists(vendor_id, product_id)
+        puts "USB filter for vendor Id: '#{vendor_id}' and product Id: #{product_id} not found in VM.  Creating new USB filter '#{filter_name}'"
+        vb.customize [
+            "usbfilter", "add", "0",
+            "--target", :id,
+            "--name", filter_name,
+            "--vendorid", vendor_id,
+            "--productid", product_id,
+            "--manufacturer", manufacturer_name,
+            "--product", product_name
+        ]
+    # -- DEBUG ONLY --
+    # else
+    #     puts "USB filter for vendor Id: '#{vendor_id}' and product Id: #{product_id} already present in VM.  Skipping '#{filter_name}' USB filter creation"
+    end
+end
+  
+# All the Vagrant configuration is done below. The number "2" in the Vagrant.configure
+# statement configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what you're doing.
+Vagrant.configure("2") do |config|
+
+    config.vm.provider "virtualbox"
+
+    # Share the root folder of the project with the virtual machine
+    config.vm.synced_folder "../", "/home/vagrant/zx-raspberry"
+
+    # Enable ssh forward agent
+    config.ssh.forward_agent = true
+
+    config.vm.define MACHINE_NAME do |node|
+
+        node.vm.box = IMAGE_NAME
+        node.vm.hostname = MACHINE_NAME
+
+        # node.vm.network "private_network", ip: "192.168.1.10"
+        node.vm.network "public_network", bridge: 'en0: Wi-Fi (Wireless)', ip: "192.168.1.10"
+
+        node.vm.provider "virtualbox" do |vb|
+            # No UI required, we just need to use the guest machine console.
+            vb.gui = false
+
+            vb.memory = 512
+            vb.cpus = 1
+
+            # Set the paravirtualization provider to KVM for linux guest, this will enable hardware acceleration and
+            # prevent excessive CPU utilisation on the host machine:
+            # - [VirtualBox consuming 100% CPU even when the guest is idle](https://superuser.com/questions/809396/virtualbox-consuming-100-cpu-even-when-the-guest-is-idle)
+            # - [Why does virtual box vboxheadless process using Vagrant use 100% of my cpu?](https://stackoverflow.com/questions/28293238/why-does-virtual-box-vboxheadless-process-using-vagrant-use-100-of-my-cpu)
+            # - [VirtualBox manual - 10.3. Hardware Virtualization](https://www.virtualbox.org/manual/ch10.html#hwvirt)
+            # - [Vagrant VirtualBox configuration](https://www.vagrantup.com/docs/virtualbox/configuration.html)
+            vb.customize ["modifyvm", :id, "--paravirtprovider", "kvm"]
+
+            # NOTE: limiting the CPU utilisation will display a performance warning message in VirtualBox
+            # Limit CPU utilisation to 60%
+            # vb.customize ["modifyvm", :id, "--cpuexecutioncap", "60"]
+
+            # Disable audio as we don't need it for cross-compilation and this will reduce resource consumption
+            vb.customize ["modifyvm", :id, "--audio", "none"]
+
+            # Configure the graphics controller to remove the warning message in VirtualBox
+            vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
+
+            vb.customize ["modifyvm", :id, "--vram", "32"]
+            vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
+        end
+
+        # Enable the USB Controller in VirtualBox
+        config.vm.provider "virtualbox" do |vb|
+            vb.customize ["modifyvm", :id, "--usb", "on"]
+            # Enable USB 1.1 (OHCI).  NOTE: USB 2.0 (EHCI) and USB 3.0 (xHCI) require the free
+            # but closed source VirtualBox Extension Pack (NOT the "platform packages")
+            # [from the VirtualBox download page](http://www.virtualbox.org/wiki/Downloads).
+            vb.customize ["modifyvm", :id, "--usbohci", "on"]
+        end
+
+        # Add the configuration for the [FTDI](https://en.wikipedia.org/wiki/FTDI) USB to serial remote interface
+        config.vm.provider "virtualbox" do |v|
+            usbfilter_add_if_not_exists(v, "0403", "6015", "FTDI FT231X USB UART [1000]", "FTDI", "FT231X USB UART")
+            # v.customize [
+            #     "usbfilter", "add", "0",
+            #     "--target", :id,
+            #     "--name", "FTDI FT231X USB UART [1000]",
+            #     "--action", "hold",
+            #     "--active", "yes",
+            #     "--vendorid", "0403",
+            #     "--productid", "6015",
+            #     "--revision", "1000",
+            #     "--manufacturer", "FTDI",
+            #     "--product", "FT231X USB UART"
+            # ]
+        end
+
+        # Set the environment variable DEBIAN_FRONTEND to "noninteractive" to prevent debconf from trying to open stdin.
+        # https://stackoverflow.com/questions/47408174/vagrant-provision-dpkg-preconfigure-unable-to-re-open-stdin
+        node.vm.provision "shell", inline: <<-SHELL
+            export DEBIAN_FRONTEND=noninteractive
+            sudo apt-get update
+            # Allow SSH with passwords
+            apt-get -y install sshpass
+            sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+            systemctl restart sshd
+        SHELL
+
+        node.vm.provision "shell" do |s|
+            ssh_prv_key = ""
+            ssh_pub_key = ""
+
+            if File.file?("#{Dir.home}/.ssh/id_rsa")
+                # ssh_prv_key = File.read("#{Dir.home}/.ssh/id_rsa")
+                ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
+            else
+                puts "No SSH key found. You will need to remedy this before pushing to the repository."
+            end
+
+            s.inline = <<-SHELL
+                if grep -sq "#{ssh_pub_key}" /home/vagrant/.ssh/authorized_keys; then
+                    echo "SSH keys already provisioned."
+                    exit 0;
+                fi
+
+                echo "SSH key provisioning."
+                mkdir -p /home/vagrant/.ssh/
+                touch /home/vagrant/.ssh/authorized_keys
+                echo #{ssh_pub_key} >> /home/vagrant/.ssh/authorized_keys
+                echo #{ssh_pub_key} > /home/vagrant/.ssh/id_rsa.pub
+                chmod 644 /home/vagrant/.ssh/id_rsa.pub
+                # echo "#{ssh_prv_key}" > /home/vagrant/.ssh/id_rsa
+                # chmod 600 /home/vagrant/.ssh/id_rsa
+                chown -R vagrant:vagrant /home/vagrant
+                exit 0
+            SHELL
+        end
+
+        # https://github.com/hashicorp/vagrant/issues/10914
+        # https://bugs.launchpad.net/ubuntu/+source/ansible/+bug/1833013
+        # https://serverfault.com/questions/500764/dpkg-reconfigure-unable-to-re-open-stdin-no-file-or-directory
+#         node.vm.provision "shell",
+#           inline:
+#             "export LANGUAGE=en_US.UTF-8 && "\
+#             "export LANG=en_US.UTF-8 && "\
+#             "export LC_ALL=en_US.UTF-8 && "\
+#             "locale-gen en_US.UTF-8 && "\
+#             "dpkg-reconfigure locales && "\
+#             "sudo apt-get update -y -qq && "\
+#             "sudo dpkg-reconfigure libc6 && "\
+#             "export DEBIAN_FRONTEND=noninteractive && "\
+#             "sudo -E apt-get -q --option \"Dpkg::Options::=--force-confold\" --assume-yes install libssl1.1"
+
+#         node.vm.provision "shell",
+#           inline: "sudo apt-get update -y -qq && "\
+#             "sudo dpkg-reconfigure libc6 && "\
+#             "export DEBIAN_FRONTEND=noninteractive && "\
+#             "sudo -E apt-get -q --option \"Dpkg::Options::=--force-confold\" --assume-yes install libssl1.1"
+
+        node.vm.provision "shell",
+          inline: "sudo apt-get update -y -qq && "\
+            "export DEBIAN_FRONTEND=noninteractive && "\
+            "sudo apt-get install -y -qq ansible"
+
+        node.vm.provision "ansible_local" do |ansible|
+            compatibility_mode = "2.0"
+            ansible.playbook = 'provision.yml'
+            ansible.inventory_path = 'hosts'
+            ansible.limit = 'all'
+            ansible.verbose = true
+            ansible.install = false
+            ansible.install_mode = 'default'
+        end
+    end
+
+end

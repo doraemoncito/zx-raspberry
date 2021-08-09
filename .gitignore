@@ -36,3 +36,10 @@
 
 # CMake
 cmake-build-*/
+
+# Vagrant
+.vagrant/
+
+# Temporary files, including cross-compilers and third party libraries
+tmp/
+lib/
