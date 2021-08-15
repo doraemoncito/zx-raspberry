@@ -153,3 +153,108 @@ No SSH key found. You will need to remedy this before pushing to the repository.
 ==> raspberry-pi-cross-compiler: Forcing shutdown of VM...
 ==> raspberry-pi-cross-compiler: Destroying VM and associated drives...
 ```
+
+## Cross-compiler toolchains
+
+| Raspberry Pi model | Bus width | CMake toolchain configuration file | Prefix         | Cross-compiler destribution file                |
+| ------------------ | --------- | ---------------------------------- | -------------- | ----------------------------------------------- |
+| 1                  | 32 bits   | toolchain-arm-eabi.cmake           | arm-eabi-      | gcc-arm-8.2-2019.01-x86_64-arm-eabi.tar.xz      |
+| 0, 1, 2, 3, 4      | 32 bits   | toolchain-arm-none-eabi.cmake      | arm-none-eabi- | gcc-arm-9.2-2019.12-x86_64-arm-none-eabi.tar.xz |
+| 4                  | 64 bits   | toolchain-arm-aarch64-elf.cmake    | aarch64-elf-   | gcc-arm-8.3-2019.03-x86_64-aarch64-elf.tar.xz   |
+
+Please note that `arm-eabi` is deprecated and `arm-none-eabi` should instead be used for all 32 bit targets, including the original Raspberry Pi.
+
+## Building U-Boot
+
+> **NOTE:** many of the step descibed in this section will be performed automatically during the development environment installation using Ansible.
+
+### Compiling Das U-boot
+
+[](https://www.beyondlogic.org/compiling-u-boot-with-device-tree-support-for-the-raspberry-pi/)
+
+Install the pre-requisites:
+
+```sh
+sudo apt-get install -y bison flex
+```
+
+Check-out of the source code:
+
+```sh
+git clone git://git.denx.de/u-boot.git
+cd u-boot
+```
+
+These are the 32 kernel image names by Raspebrry Pi model:
+
+| RASPPI | Target         | Models                   | Optimized for |
+| ------ | -------------- | ------------------------ | ------------- |
+| 1      | kernel.img     | A, B, A+, B+, Zero, (CM) | ARM1176JZF-S  |
+| 2      | kernel7.img    | 2, 3, (CM3)              | Cortex-A7     |
+| 3      | kernel8-32.img | 3, (CM3)                 | Cortex-A53    |
+| 4      | kernel7l.img   | 4B, 400, CM4             | Cortex-A72    |
+
+Next, set the default configuration. This will vary depending upon the Raspberry Pi variant you wish to target:
+
+| Raspberry Pi Variant              | Processor | Kernel image   | Configuration File     | Cross-compiler prefix |
+| --------------------------------- | --------- | -------------- | ---------------------- | --------------------- |
+| Raspberry Pi Model A              | BCM2835   | kernel.img     | rpi_defconfig          | arm-none-eabi-        |
+| Raspberry Pi Model A+             | BCM2835   | kernel.img     | rpi_defconfig          | arm-none-eabi-        |
+| Raspberry Pi Model B+             | BCM2835   | kernel.img     | rpi_defconfig          | arm-none-eabi-        |
+| Raspberry Pi Compute Module       | BCM2835   | kernel.img     | rpi_defconfig          | arm-none-eabi-        |
+| Raspberry Pi Zero                 | BCM2835   | kernel.img     | rpi_defconfig          | arm-none-eabi-        |
+| Raspberry Pi Zero W               | BCM2835   | kernel.img     | rpi_0_w_defconfig      | arm-none-eabi-        |
+| Raspberry Pi 2 Model B            | BCM2836   | kernel7.img    | rpi_2_defconfig        | arm-none-eabi-        |
+| Raspberry Pi 3 Model B            | BCM2837   | kernel8-32.img | rpi_3_defconfig        | arm-none-eabi-        |
+| Raspberry Pi 3 Model B+           | BCM2837B0 | kernel8-32.img | rpi_3_b_plus_defconfig | aarch64-elf-          |
+| Raspberry Pi 4 Model B+ (32 bits) | BCM2711B0 | kernel7l.img   | rpi_4_32b_defconfig    | arm-none-eabi-        |
+| Raspberry Pi 4 Model B+ (64 bits) | BCM2711B0 | kernel8.img    | rpi_4_defconfig        | aarch64-elf-          |
+
+For more detailed hardware information please see the [Raspberry Pi specifications on Wikipedia](https://en.wikipedia.org/wiki/Raspberry_Pi#Specifications).
+
+For example, if we wish to target the Raspberry Pi Model B+, we run the following command to configure the U-Boot build:
+
+```sh
+make CROSS_COMPILE=arm-none-eabi- rpi_defconfig
+```
+
+and finally compile U-Boot with this command:
+
+```sh
+make CROSS_COMPILE=arm-none-eabi- u-boot.bin
+```
+
+Then copy the resulting *u-boot.bin* to the SD card and rename it *kernel.img* (for Raspberry Pi 1)
+
+> **NOTE:** Run the `ntpdate` command to synchonise the Virtual Machine's clock, e.g.  `sudo ntpdate time.nist.gov` if you get a warning like this when building the code:
+> 
+>```text
+>make[1]: warning:  Clock skew detected.  Your build may be incomplete.
+>```
+
+The following scripts compiles a set of five U-Boot kernel images that can all be placed simultaneously on the same SD card to boot on any Raspberry Pi model.
+
+```sh
+echo "Synchronizing the Virtual Machine's clock"
+sudo ntpdate time.nist.gov
+
+echo "Compiling U-Boot for Raspberry Pi 1"
+make CROSS_COMPILE=arm-none-eabi- distclean rpi_defconfig u-boot.bin
+mv u-boot.bin ../kernel.img
+
+echo "Compiling U-Boot for Raspberry Pi 2"
+make CROSS_COMPILE=arm-none-eabi- distclean rpi_2_defconfig u-boot.bin
+mv u-boot.bin ../kernel7.img
+
+echo "Compiling U-Boot for Raspberry Raspberry Pi 3 Model B+"
+make CROSS_COMPILE=aarch64-elf- distclean rpi_3_b_plus_defconfig u-boot.bin
+mv u-boot.bin ../kernel8-32.img
+
+echo "Compiling U-Boot for Raspberry Pi 4B (32 bits)"
+make CROSS_COMPILE=arm-none-eabi- distclean rpi_4_32b_defconfig u-boot.bin
+mv u-boot.bin ../kernel7l.img
+
+echo "Compiling U-Boot for Raspberry Pi 4B (64 bits)"
+make CROSS_COMPILE=aarch64-elf- distclean rpi_4_defconfig u-boot.bin
+mv u-boot.bin ../kernel8.img
+```

@@ -72,6 +72,7 @@
           # Required for Das U-Boot (mkimage and other utilities)
           - bison
           - flex
+          - libssl-dev
           - u-boot-tools
           - device-tree-compiler
           # Serial communication using the Makers pHat
@@ -85,8 +86,15 @@
           - texinfo
           # Required for V3DLib
           - libexpat1-dev
+          # Required for Sphinx and [ReadTheDocs](https://docs.readthedocs.io/en/stable/index.html)
+          - python3-pip
         state: latest
         force_apt_get: True
+
+    # Required to build the documentation with Sphinx [ReadTheDocs](https://docs.readthedocs.io/en/stable/index.html)
+    - name: "Install the Sphinx python package"
+      pip:
+        name: sphinx
 
     - name: "Add the vagrant user to the dialout group so that it can access the Maker pHat serial device /dev/ttyUSB0"
       user:
