@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2020-2022 Jose Hernandez
- * Copyright (c) 2017 José Luis Sanchez
  *
  * This file is part of ZxRaspberry.
  *
@@ -17,29 +16,22 @@
  * You should have received a copy of the GNU General Public License
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef ZXDISPLAY_H
-#define ZXDISPLAY_H
+#include "JoystickAdapter.h"
 
-#include <cstdint>
-#include <circle/bcmframebuffer.h>
-#include <circle/types.h>
+bool JoystickAdapter::isAxisButtonReleased(const TGamePadState &pState, TGamePadButton button, TGamePadAxis axis) {
 
-class ZxDisplay {
-public:
-    ZxDisplay();
-    ~ZxDisplay();
+    return !isAxisButtonPressed(pState, button, axis);
+}
 
-    bool Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer);
-    void update(bool flash);
-    void setBorder(uint8_t m_border);
+bool JoystickAdapter::isAxisButtonPressed(const TGamePadState &pState, TGamePadButton button, TGamePadAxis axis) {
 
-private:
-    CBcmFrameBuffer *m_pFrameBuffer;
-    uint32_t *m_pBuffer;                // Address of frame buffer
-    uint32_t (*m_pScrTable)[256][256];  // lookup table
-    uint8_t *m_pVideoMem;               // Spectrum video memory
-    uint8_t m_border;                   // Border colour index
-    bool m_borderChanged;
-};
+//    if (axis < m_GamePadState.naxes) {
+//        CString Value;
+//        Value.Format("%03u", m_GamePadState.axes[axis].value);
+////        PrintAt(nPosX, nPosY, Value, m_GamePadState.buttons & button ? TRUE : FALSE);
+////    } else {
+////        PrintAt(nPosX, nPosY, pName, m_GamePadState.buttons & button ? TRUE : FALSE);
+//    }
 
-#endif // ZXDISPLAY_H
+    return (pState.buttons & button) != 0;
+}

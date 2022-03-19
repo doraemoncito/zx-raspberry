@@ -3,26 +3,34 @@
   become: yes
   user: vagrant
   vars:
-    - arm_file_name: gcc-arm-8.2-2019.01-x86_64-arm-eabi
-    - arm_file_ext: .tar.xz
-    - arm_bare_file_name: gcc-arm-9.2-2019.12-x86_64-arm-none-eabi
-    - arm_bare_file_ext: .tar.xz
-    - arm_aarch64_bare_file_name: gcc-arm-8.3-2019.03-x86_64-aarch64-elf
-    - arm_aarch64_bare_file_ext: .tar.xz
+    # Compiler download variables
+    # https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads
+
+    # gcc-arm-10.3-2021.07-x86_64-arm-none-eabi.tar.xz
+    - arm_aarch32_bare_metal_version: "10.3-2021.07"
+    - arm_aarch32_bare_metal_file_name: "gcc-arm-{{arm_aarch32_bare_metal_version}}-x86_64-arm-none-eabi"
+    - arm_aarch32_bare_metal_file_ext: ".tar.xz"
+    - arm_aarch32_bare_metal_file_url: "https://developer.arm.com/-/media/Files/downloads/gnu-a/{{arm_aarch32_bare_metal_version}}/binrel/{{arm_aarch32_bare_metal_file_name}}{{arm_aarch32_bare_metal_file_ext}}"
+
+    # gcc-arm-10.3-2021.07-x86_64-aarch64-none-elf
+    - arm_aarch64_bare_metal_version: "10.3-2021.07"
+    - arm_aarch64_bare_metal_file_name: "gcc-arm-{{ arm_aarch64_bare_metal_version }}-x86_64-aarch64-none-elf"
+    - arm_aarch64_bare_metal_file_ext: ".tar.xz"
+    - arm_aarch64_bare_metal_url: "https://developer.arm.com/-/media/Files/downloads/gnu-a/{{ arm_aarch64_bare_metal_version }}/binrel/{{ arm_aarch64_bare_metal_file_name }}{{ arm_aarch64_bare_metal_file_ext }}"
+
     - cross_compiler_base_install_dir: /usr/local/opt
     - circle_dest_dir: /home/vagrant/zx-raspberry/lib/circle
     - circle_dest_boot_dir: "{{ circle_dest_dir }}/boot"
     - circle_stdlib_dest_dir: /home/vagrant/zx-raspberry/lib/circle-stdlib
     - circle_stdlib_dest_boot_dir: "{{ circle_stdlib_dest_dir }}/libs/circle/boot"
-    - v3dlib_dest_dir: /home/vagrant/zx-raspberry/lib/v3dlib
     - z80cpp_dest_dir: /home/vagrant/zx-raspberry/src/z80cpp
     - uboot_dest_dir: /home/vagrant/zx-raspberry/lib/u-boot
     - libspectrum_dest_dir: /home/vagrant/zx-raspberry/lib/libspectrum
   environment:
-    PATH: "{{ cross_compiler_base_install_dir }}/{{ arm_file_name }}/bin:{{ cross_compiler_base_install_dir }}/{{ arm_bare_file_name }}/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ cross_compiler_base_install_dir }}/{{ arm_aarch32_bare_metal_file_name }}/bin:{{ cross_compiler_base_install_dir }}/{{ arm_aarch64_bare_metal_file_name }}/bin:{{ ansible_env.PATH }}"
   tasks:
 
-    - name: Updating installed packages
+    - name: "Updating installed packages"
       apt:
         name: '*'
         update_cache: yes
@@ -42,7 +50,7 @@
     # need to build some utilities like the converttool which will run natively on the box
     # rather than the target Raspberry Pi, so we also need to install the native GCC toolchain
     # in addition to the ARM GCC cross-compiler.
-    - name: Install the native development tools (GCC, Make and Git)
+    - name: "Installing the native development tools (GCC, Make, Git, etc.)"
       apt:
         name:
           # Miscellaneous development tools
@@ -88,11 +96,21 @@
           - libexpat1-dev
           # Required for Sphinx and [ReadTheDocs](https://docs.readthedocs.io/en/stable/index.html)
           - python3-pip
+          # Desktop environment
+          - ubuntu-desktop
+          # Desktop resizing support
+          - virtualbox-guest-dkms
+          - virtualbox-guest-utils
+          - virtualbox-guest-x11
+          - firefox
+          # [sigrok signal analyser](https://sigrok.org)
+          - sigrok-firmware-fx2lafw
+          - pulseview
         state: latest
         force_apt_get: True
 
     # Required to build the documentation with Sphinx [ReadTheDocs](https://docs.readthedocs.io/en/stable/index.html)
-    - name: "Install the Sphinx python package"
+    - name: "Installing the Sphinx python package"
       pip:
         name: sphinx
 
@@ -104,7 +122,15 @@
           - tty
         append: yes
 
-    - name: "Setup the TFTP server to deploy kernel images to the Raspberry Pi board via U-Boot"
+    - name: "Enabling automatic logins"
+      template:
+        src: templates/custom.conf
+        dest: /etc/gdm3/custom.conf
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+
+    - name: "Setting up the TFTP server to deploy kernel images to the Raspberry Pi board via U-Boot"
       become: yes
       template:
         src: templates/tftp/tftp.j2
@@ -121,96 +147,67 @@
         group: nogroup
         mode: '0777'
 
-    - name: Reload the extended Internet services daemon - xinetd
+    - name: "Reloading the extended Internet services daemon - xinetd"
       service:
         name: xinetd
         state: reloaded
 
-    - name: "Create the cross compiler installation directory '{{ cross_compiler_base_install_dir }}'"
+    ##
+    ## INSTALL THE GCC ARM CROSS-COMPILERS
+    ##
+
+    - name: "Creating the cross-compiler installation directory '{{ cross_compiler_base_install_dir }}'"
       file:
         path: "{{ cross_compiler_base_install_dir }}"
         state: directory
 
-    # Install the cross-compiler with prefix "arm-eabi-"
-    # Details on how to set up a cross-compiler for the Raspberry PI are included in the
-    # Circle library documentation (https://github.com/doraemoncito/circle#building)
-    #
-    # The cross-compiler for Raspberry Pi 2, 3 and 4 without AArch64 support can be downloaded from here:
-    # https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads
-    # - name: Download the AArch32 bare-metal target (arm-eabi) GCC compiler for Raspberry Pi Linux from ARM's developer site
-    #
-    # Instructions on 32 bit cross-compiler requirements can be found here: https://github.com/doraemoncito/circle#building
+    # Information on how to set up the AArch32 cross-compiler for the Raspberry Pi 1, 2, 3 and 4 is included in the Circle library documentation (https://github.com/doraemoncito/circle#building)
 
-    - name: Download the ARM x86_64 Linux hosted AArch32 bare-metal target (arm-eabi) cross compiler for Raspberry Pi (8.2-2019.01)
+    - name: "Downloading ARM x86_64 Linux hosted cross compiler: AArch32 bare-metal target (arm-none-eabi) for Raspberry Pi"
       get_url:
-        url: "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.2-2019.01/{{ arm_file_name }}{{ arm_file_ext }}?revision=72b9b9ec-30c5-4543-ae95-3d840eb01dae&la=en&hash=C898D59AC42008ED0527538ADF200C11F3E8F53A"
-        dest: "/home/vagrant/zx-raspberry/tmp/{{ arm_file_name }}{{ arm_file_ext }}"
+        url: "{{ arm_aarch32_bare_metal_file_url}}"
+        dest: "/home/vagrant/zx-raspberry/tmp/{{ arm_aarch32_bare_metal_file_name }}{{ arm_aarch32_bare_metal_file_ext }}"
         mode: '0444'
-        checksum: md5:fc11c4f55085c613133d7527a00fed8a
+        checksum: md5:ef168601dc56dcc10befb4c2fe9ba03a
 
-    # Install the bare metal ARM cross-compiler 8.2-2019.01
-
-    - name: "Install the ARM x86_64 Linux hosted AArch32 bare-metal target (arm-eabi) cross compiler for Raspberry Pi (8.2-2019.01) in directory '{{ cross_compiler_base_install_dir }}/{{ arm_file_name }}'"
+    - name: "Installing ARM x86_64 Linux hosted cross compiler: AArch32 bare-metal target (arm-none-eabi) for Raspberry Pi in directory '{{ cross_compiler_base_install_dir }}/{{ arm_aarch32_bare_metal_file_name }}'"
       unarchive:
-        src: "/home/vagrant/zx-raspberry/tmp/{{ arm_file_name }}{{ arm_file_ext }}"
+        src: "/home/vagrant/zx-raspberry/tmp/{{ arm_aarch32_bare_metal_file_name }}{{ arm_aarch32_bare_metal_file_ext }}"
         dest: "{{ cross_compiler_base_install_dir }}"
-        creates: "{{ cross_compiler_base_install_dir }}/{{ arm_file_name }}"
+        creates: "{{ cross_compiler_base_install_dir }}/{{ arm_aarch32_bare_metal_file_name }}"
 
-    - name: "Add the ARM x86_64 Linux hosted AArch32 bare-metal target (arm-eabi) cross compiler for Raspberry Pi (8.2-2019.01) location to the path"
+    - name: "Adding ARM x86_64 Linux hosted cross compiler: AArch32 bare-metal target (arm-none-eabi) for Raspberry Pi location to the path"
       lineinfile:
         path: /home/vagrant/.bashrc
-        line: "export PATH={{ cross_compiler_base_install_dir }}/{{ arm_file_name }}/bin:$PATH"
+        line: "export PATH={{ cross_compiler_base_install_dir }}/{{ arm_aarch32_bare_metal_file_name }}/bin:$PATH"
         create: yes
 
-    # The cross-compiler for Raspberry Pi 2, 3 and 4 without AArch64 support can be downloaded from here:
-    # https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads
-    # Instructions on 32 bit cross-compiler requirements can be found here: https://github.com/doraemoncito/circle#building
-    - name: Download the ARM x86_64 Linux hosted AArch32 bare-metal target (arm-none-eabi) cross compiler for Raspberry Pi (9.2-2019.12)
+    # Information on how to set up the AArch32 cross-compiler for Raspberry Pi 3 and 4 is included in the Circle library documentation (https://github.com/doraemoncito/circle#aarch64)
+
+    - name: "Downloading x86_64 Linux hosted cross compilers, AArch64 ELF bare-metal target (aarch64-none-elf) 64 bit cross-compiler for Raspberry Pi 3 and 4"
       get_url:
-        url: "https://developer.arm.com/-/media/Files/downloads/gnu-a/9.2-2019.12/binrel/{{ arm_bare_file_name }}{{ arm_bare_file_ext }}?revision=64186c5d-b471-4c97-a8f5-b1b300d6594a&la=en&hash=5E9204DA5AF0B055B5B0F50C53E185FAA10FF625"
-        dest: "/home/vagrant/zx-raspberry/tmp/{{ arm_bare_file_name }}{{ arm_bare_file_ext }}"
+        url: "{{ arm_aarch64_bare_metal_url }}"
+        dest: "/home/vagrant/zx-raspberry/tmp/{{ arm_aarch64_bare_metal_file_name }}{{ arm_aarch64_bare_metal_file_ext }}"
         mode: '0444'
-        checksum: md5:f7cc38b807c9b9815e5b0fb8440e3657
+        checksum: md5:0b3df9b763899d66a00b21a51a5b27b1
 
-    # Install the bare metal ARM cross-compiler 9.2-2019.12
-
-    - name: "Install the ARM x86_64 Linux hosted AArch32 bare-metal target (arm-none-eabi) cross compiler for Raspberry Pi (9.2-2019.12) in directory '{{ cross_compiler_base_install_dir }}/{{ arm_bare_file_name }}'"
+    - name: "Installing x86_64 Linux hosted cross compilers, AArch64 ELF bare-metal target (aarch64-none-elf) 64 bit cross-compiler for Raspberry Pi 3 and 4 in directory '{{ cross_compiler_base_install_dir }}/{{ arm_aarch64_bare_metal_file_name }}''"
       unarchive:
-        src: "/home/vagrant/zx-raspberry/tmp/{{ arm_bare_file_name }}{{ arm_bare_file_ext }}"
+        src: "/home/vagrant/zx-raspberry/tmp/{{ arm_aarch64_bare_metal_file_name }}{{ arm_aarch64_bare_metal_file_ext }}"
         dest: "{{ cross_compiler_base_install_dir }}"
-        creates: "{{ cross_compiler_base_install_dir }}/{{ arm_bare_file_name }}"
+        creates: "{{ cross_compiler_base_install_dir }}/{{ arm_aarch64_bare_metal_file_name }}"
 
-    - name: "Add the the ARM x86_64 Linux hosted AArch32 bare-metal target (arm-none-eabi) cross compiler for Raspberry Pi (9.2-2019.12) location to the path"
+    - name: "Adding x86_64 Linux hosted cross compilers, AArch64 ELF bare-metal target (aarch64-none-elf) 64 bit cross-compiler for Raspberry Pi 3 and 4 location to the path"
       lineinfile:
         path: /home/vagrant/.bashrc
-        line: "export PATH={{ cross_compiler_base_install_dir }}/{{ arm_bare_file_name }}/bin:$PATH"
+        line: "export PATH={{ cross_compiler_base_install_dir }}/{{ arm_aarch64_bare_metal_file_name }}/bin:$PATH"
         create: yes
 
-    # The 64 bit cross-compiler for Raspberry Pi 3 and 4 with AArch64 support can be downloaded from here:
-    # https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads
-    # Instructions on 64 bit cross-compiler requirements can be found here: https://github.com/doraemoncito/circle#aarch64
-    - name: Download the ARM x86_64 Linux hosted AArch64 ELF bare-metal target (aarch64-elf) 64 bit cross compiler for Raspberry Pi 3 and 4 (8.3-2019.03)
-      get_url:
-        url: "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/{{ arm_aarch64_bare_file_name }}{{ arm_aarch64_bare_file_ext }}?revision=d678fd94-0ac4-485a-8054-1fbc60622a89&la=en&hash=983B477DA9B33107F58777D880FBAD2D3103C130"
-        dest: "/home/vagrant/zx-raspberry/tmp/{{ arm_aarch64_bare_file_name }}{{ arm_aarch64_bare_file_ext }}"
-        mode: '0444'
-        checksum: md5:b19ca6c5b3f6c506092c404d26e7cc41
+    ##
+    ## INSTALL THIRD PARTY CODE
+    ##
 
-    # Install the bare metal 64 bit ARM cross-compiler (8.3-2019.03)
-
-    - name: "Install the ARM x86_64 Linux hosted AArch64 ELF bare-metal target (aarch64-elf) 64 bit cross compiler for Raspberry Pi 3 and 4 (8.3-2019.03) in directory '{{ cross_compiler_base_install_dir }}/{{ arm_aarch64_bare_file_name }}'"
-      unarchive:
-        src: "/home/vagrant/zx-raspberry/tmp/{{ arm_aarch64_bare_file_name }}{{ arm_aarch64_bare_file_ext }}"
-        dest: "{{ cross_compiler_base_install_dir }}"
-        creates: "{{ cross_compiler_base_install_dir }}/{{ arm_aarch64_bare_file_name }}"
-
-    - name: "Add the the ARM x86_64 Linux hosted AArch64 ELF bare-metal target (aarch64-elf) 64 bit cross compiler for Raspberry Pi 3 and 4 (8.3-2019.03) location to the path"
-      lineinfile:
-        path: /home/vagrant/.bashrc
-        line: "export PATH={{ cross_compiler_base_install_dir }}/{{ arm_aarch64_bare_file_name }}/bin:$PATH"
-        create: yes
-
-    - name: "Clone the Circle library source code from GitHub"
+    - name: "Cloning the Circle library source code from GitHub"
       become: no
       git:
         # repo: 'https://github.com/rsta2/circle'
@@ -225,22 +222,23 @@
         group: vagrant
         mode: u=rw,g=r,o=r
 
-    - name: "Clone the circle-stdlib source code from GitHub"
+    - name: "Cloning the circle-stdlib source code from GitHub"
       become: no
       git:
         # repo: 'https://github.com/smuehlst/circle-stdlib'
         repo: 'https://github.com/doraemoncito/circle-stdlib.git'
         dest: "{{ circle_stdlib_dest_dir }}"
         recursive: true
+        force: true
 
-    - name: "Clone the V3DLib source code from GitHub"
-      become: no
-      git:
-        # repo: 'https://github.com/wimrijnders/V3DLib.git'
-        repo: 'https://github.com/doraemoncito/V3DLib.git'
-        dest: "{{ v3dlib_dest_dir }}"
-        recursive: true
-
+#    - name: "Clone the V3DLib source code from GitHub"
+#      become: no
+#      git:
+#        # repo: 'https://github.com/wimrijnders/V3DLib.git'
+#        repo: 'https://github.com/doraemoncito/V3DLib.git'
+#        dest: "{{ v3dlib_dest_dir }}"
+#        recursive: true
+#
 #    - name: "Check if V3DLib has already been built"
 #      stat:
 #        path: "{{ v3dlib_dest_dir }}/qpu-debug/Lib/vc4/vc4.a"
@@ -260,7 +258,7 @@
 #        dest: "{{ z80cpp_dest_dir }}"
 #        version: cmake_cross_compile
 
-    - name: "Clone Das U-Boot's source code"
+    - name: "Cloning Das U-Boot's source code"
       become: no
       git:
         # repo: 'https://github.com/u-boot/u-boot'
@@ -287,7 +285,7 @@
 #        basedir: "{{ uboot_dest_dir }}"
 #        strip: 1
 
-    - name: "Copy the Das U-Boot boot-up script to the source tree"
+    - name: "Copying the Das U-Boot boot-up script to the source tree"
       template:
         src: templates/uboot/boot.scr.j2
         dest: "{{ uboot_dest_dir }}/boot.scr"
@@ -303,7 +301,7 @@
     #
     #   git clone https://github.com/doraemoncito/libspectrum.git
     #
-    - name: Clone the libspectrum library source code from GitHub
+    - name: "Cloning the libspectrum library source code from GitHub"
       become: no
       git:
        repo: 'https://github.com/doraemoncito/libspectrum.git'
@@ -316,7 +314,7 @@
     #
     # Previous builds can be cleared with "make clean" and "make mrproper" to clean the object files and the
     # configuration respectively.
-    - name: "Change the working directory to '{{ circle_stdlib_dest_dir }}/' and run configure if the library has not been built previously"
+    - name: "Changing the working directory to '{{ circle_stdlib_dest_dir }}/' and run configure if the library has not been built previously"
       become: no
       command: ./configure --raspberrypi 4 --prefix arm-none-eabi-
 #        argv:
@@ -344,12 +342,12 @@
         chdir: "{{ circle_stdlib_dest_dir }}/"
         creates: "{{ circle_stdlib_dest_dir }}/Config.mk"
 
-    - name: "Check if the Circle C++ Standard Library has already been built"
+    - name: "Checking if the Circle C++ Standard Library has already been built"
       stat: 
         path: "{{ circle_stdlib_dest_dir }}/install/arm-none-circle/lib/libcirclenewlib.a"
       register: circle_stardard_library
   
-    - name: "Build the Circle C++ Standard Library"
+    - name: "Building the Circle C++ Standard Library"
       become: no
       make:
         chdir: "{{ circle_stdlib_dest_dir }}/"
@@ -357,7 +355,7 @@
       when: circle_stardard_library.stat.exists == False
   
     # Pulls the Raspberry Pi firmware used by Circle from GitHub
-    - name: "Change the working directory to '{{ circle_dest_dir }}/boot' and run make if the kernel has not been built previously"
+    - name: "Changing the working directory to '{{ circle_dest_dir }}/boot' and run make if the kernel has not been built previously"
       command: make
       become: no
       args:
@@ -366,7 +364,7 @@
         creates: "{{ circle_dest_dir }}/boot/bcm2711-rpi-4-b.dtb"
 
     # Build the Circle library
-    - name: "Change the working directory to '{{ circle_dest_dir }}' and run the makeall if the kernel has not been built previously"
+    - name: "Changing the working directory to '{{ circle_dest_dir }}' and run the makeall if the kernel has not been built previously"
       command: ./makeall
       become: no
       args:
@@ -374,7 +372,7 @@
         creates: "{{ circle_dest_dir }}/sample/38-bootloader/kernel.img"
 
     # Build the Circle documentation
-    - name: "Change the working directory to '{{ circle_dest_dir }}' and run the makedoc if the documentation has not been built previously"
+    - name: "Changing the working directory to '{{ circle_dest_dir }}'' and run the makedoc if the documentation has not been built previously"
       command: ./makedoc
       become: no
       args:
@@ -391,7 +389,7 @@
     #     creates: "{{ circle_dest_dir }}/lib/bt/libbluetooth.a"
 
     # Build the Circle code samples
-    - name: "Change the working directory to '{{ circle_dest_dir }}/sample' and run the makeall if the kernel has not been built previously"
+    - name: "Changing the working directory to '{{ circle_dest_dir }}/sample' and run the makeall if the kernel has not been built previously"
       command: ./makeall
       become: no
       args:
@@ -414,7 +412,7 @@
     #
     #  /* Sizes of some of the arrays in the snap structure */
     #
-    - name: Copy the libspectrum patch file to the source tree
+    - name: "Copying the libspectrum patch file to the source tree"
       template:
         src: templates/libspectrum/libspectrum.patch.j2
         dest: "{{ libspectrum_dest_dir }}/libspectrum.patch"
@@ -422,7 +420,7 @@
         group: vagrant
         mode: u=rw,g=r,o=r
 
-    - name: Apply patch to multiple files under basedir
+    - name: "Applying patch to multiple files under basedir"
       patch:
         src: "{{ libspectrum_dest_dir }}/libspectrum.patch"
         basedir: "{{ libspectrum_dest_dir }}"
@@ -432,7 +430,7 @@
     #
     #   ./autogen.sh 
     #
-    - name: "Change the working directory to '{{ circle_dest_dir }}' and generate the libSpectrum configure script if it has not been generated previously"
+    - name: "Changing the working directory to '{{ circle_dest_dir }}'' and generate the libSpectrum configure script if it has not been generated previously"
       command: ./autogen.sh
       become: no
       args:
@@ -445,7 +443,7 @@
     #     ./configure --target=arm-none-eabi --host=arm-none-eabi --build=x86_64-linux --prefix "/usr/local/opt/gcc-arm-8.2-2019.01-x86_64-arm-eabi/bin/" \
     #     --without-libgcrypt --with-fake-glib --without-libaudiofile
     #
-    - name: "Configure the libSpectrum library and generate its Makefile"
+    - name: "Configuring the libSpectrum library and generate its Makefile"
       command:
         argv:
           - "./configure"
@@ -453,7 +451,7 @@
           - "--host=arm-none-eabi"
           - "--build=x86_64-linux"
           - "--prefix"
-          - "{{ cross_compiler_base_install_dir }}/{{ arm_file_name }}/bin/"
+          - "{{ cross_compiler_base_install_dir }}/{{ arm_aarch32_bare_metal_file_name }}/bin/"
           - "--without-libgcrypt"
           - "--with-fake-glib"
           - "--without-libaudiofile"
@@ -470,7 +468,7 @@
         LDFLAGS: "--specs=nosys.specs"
         STRIP: arm-eabi-strip
   
-    - name: "Check if the libSpectrum library has already been built"
+    - name: "Checking if the libSpectrum library has already been built"
       stat: 
         path: "{{ libspectrum_dest_dir }}/libspectrum.la"
       register: libspectrum_static_library
@@ -479,3 +477,8 @@
       make:
         chdir: "{{ libspectrum_dest_dir }}"
       when: libspectrum_static_library.stat.exists == False
+
+    - name: "Reboot the machine"
+      shell: "sleep 5 && reboot"
+      async: 1
+      poll: 0

@@ -1,0 +1,58 @@
+echo [STAGE 2] ===== ZX Raspberry stage 2 boot configuration =====
+#echo [STAGE 2] ===== Configuring ethernet over USB =====
+#usb start
+#setenv usbnet_devaddr f8:dc:7a:00:00:02
+#setenv usbnet_hostaddr f8:dc:7a:00:00:01
+#setenv ethact usb_ether
+#printenv usbnet_devaddr
+#printenv usbnet_hostaddr
+#printenv ethact
+echo [STAGE 2] ===== Configuring U-Boot =====
+# Disable autoload to prevent dhcp from automatically downloading a kernel image from an autoconfigured server
+setenv autoload no
+# Disable auto-start since when auto-start is enabled, the tftp command attempts to launch the stage 2 bootloader
+# script as a kernel image, which, of course, it isn't.
+setenv autostart no
+printenv autoload
+printenv autostart
+#dhcp
+setenv hostname uboot
+setenv netmask 255.255.255.0
+setenv serverip 192.168.1.10
+setenv gatewayip 192.168.2.2
+setenv ipaddr 192.168.2.3
+setenv dnsip 192.168.1.254
+setenv bootfile zxraspberry.uimg
+#setenv bootfile kernel7l.uimg
+setenv loadaddr 0x00008000
+setenv fdt_addr_r 0x10000000
+setenv kernel_addr_r 0x00008000
+#setenv fdt_addr_r 0x01200000
+#setenv kernel_addr_r 0x00008000
+setenv baudrate 115200
+printenv hostname
+printenv netmask
+printenv serverip
+printenv gatewayip
+printenv ipaddr
+printenv dnsip
+printenv fdtfile
+printenv bootfile
+printenv loadaddr
+printenv baudrate
+printenv fdt_addr_r
+printenv fdt_addr
+printenv kernel_addr_r
+#echo [STAGE 2] ===== Loading flattened device tree (FDT) blob from TFTP server =====
+#tftp ${fdt_addr_r} ${fdtfile}
+#fdt addr ${fdt_addr_r}
+echo [STAGE 2] ===== Loading flattened device tree (FDT) blob from file =====
+fatload mmc 0:1 ${fdt_addr_r} ${fdtfile}
+fdt addr ${fdt_addr_r}
+echo [STAGE 2] ===== Downloading ZX Raspberry boot image from TFTP server =====
+tftp ${loadaddr} ${bootfile}
+echo [STAGE 2] ===== Launching ZX Raspberry kernel image =====
+bootargs=console=serial0,115200 console=ttyAMA0 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 usbpowerdelay=2000 keymap=UK logdev=ttyS1
+#bootargs=console=serial0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 usbpowerdelay=2000 keymap=UK logdev=ttyS1
+bootm ${kernel_addr_r} - ${fdt_addr_r}
+echo [STAGE 2] ===== ZX Raspberry stage 2 bootloader complete! =====

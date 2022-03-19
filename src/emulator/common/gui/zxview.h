@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2020-2022 Jose Hernandez
- * Copyright (c) 2017 José Luis Sanchez
  *
  * This file is part of ZxRaspberry.
  *
@@ -17,29 +16,38 @@
  * You should have received a copy of the GNU General Public License
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef ZXDISPLAY_H
-#define ZXDISPLAY_H
+#ifndef ZX_VIEW_H
+#define ZX_VIEW_H
+
 
 #include <cstdint>
-#include <circle/bcmframebuffer.h>
-#include <circle/types.h>
+#include "zxrect.h"
 
-class ZxDisplay {
+class ZxView {
+
 public:
-    ZxDisplay();
-    ~ZxDisplay();
+    ZxView(ZxRect const &bounds);
+    virtual ~ZxView();
+    void printText(unsigned char *buffer, unsigned int column, unsigned int row, unsigned char ink, unsigned char paper,
+                   char const *text);
+    void clear(uint8_t *buffer, uint8_t paper);
+    virtual void draw(uint8_t *buffer) = 0;
 
-    bool Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer);
-    void update(bool flash);
-    void setBorder(uint8_t m_border);
+    ZxView *parent() const;
+    void setParent(ZxView *parent);
+
+    ZxRect const &bounds() const;
 
 private:
-    CBcmFrameBuffer *m_pFrameBuffer;
-    uint32_t *m_pBuffer;                // Address of frame buffer
-    uint32_t (*m_pScrTable)[256][256];  // lookup table
-    uint8_t *m_pVideoMem;               // Spectrum video memory
-    uint8_t m_border;                   // Border colour index
-    bool m_borderChanged;
+    // TODO: move this to a singleton ZxCharset class;
+    static uint8_t characters[0x90 * 0x08];
+    const unsigned int charsetAddr = 0x3D00;
+
+protected:
+    ZxView *m_parent;
+    ZxRect const &m_bounds;
+
 };
 
-#endif // ZXDISPLAY_H
+
+#endif //ZX_VIEW_H

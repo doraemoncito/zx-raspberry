@@ -1,0 +1,1 @@
+earlyprintk console=serial0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline fsck.repair=yes usbpowerdelay=2000 keymap=UK rootwait modules-load=dwc2,g_ether g_ether.host_addr=f8:dc:7a:00:00:01 g_ether.dev_addr=f8:dc:7a:00:00:02

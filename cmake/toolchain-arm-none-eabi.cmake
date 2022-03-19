@@ -2,11 +2,11 @@
 #
 # Invoke CMake with the arguments below to build the project for Raspberry Pi in release mode:
 #
-#   cmake -DCMAKE_TOOLCHAIN_FILE=../toolchain-arm-none-eabi.cmake ..
+#   cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-arm-none-eabi.cmake ..
 #
 # or like this for DEBUG mode:
 #
-#   cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=../toolchain-arm-none-eabi.cmake ..
+#   cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-arm-none-eabi.cmake ..
 #
 # the machine architecture of the compiler can be found by running:                                                                         
 #                                                                                                                                           
@@ -31,9 +31,11 @@ set(CMAKE_LINKER ${CROSS_COMPILE}ld)
 
 # RASPBERRY PI 1
 #set(CFLAGS_FOR_TARGET "-DAARCH=32 -march=armv6k -mtune=arm1176jzf-s -marm -mfpu=vfp -mfloat-abi=hard -Wno-parentheses")
+#set(TARGET kernel7)
 
-# RASPBERRY PI 4
-set(CFLAGS_FOR_TARGET "-DAARCH=32 -march=armv8-a -mtune=cortex-a72 -marm -mfpu=neon-fp-armv8 -mfloat-abi=hard -Wno-parentheses")
+# RASPBERRY PI 4 - 32 bits
+set(CFLAGS_FOR_TARGET "-DAARCH=32 -mcpu=cortex-a72 -marm -mfpu=neon-fp-armv8 -mfloat-abi=hard -Wno-parentheses")
+#set(CFLAGS_FOR_TARGET "-DAARCH=32                  -marm -mfpu=neon-fp-armv8 -mfloat-abi=hard -Wno-parentheses -march=armv8-a -mtune=cortex-a72")
 set(TARGET kernel7l)
 
 # https://stackoverflow.com/questions/43781207/how-to-cross-compile-with-cmake-arm-none-eabi-on-windows)

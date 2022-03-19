@@ -1,0 +1,46 @@
+echo [STAGE 1] ===== ZX Raspberry stage 1 boot configuration =====
+#echo [STAGE 1] ===== Configuring ethernet over USB =====
+#usb start
+#setenv usbnet_devaddr f8:dc:7a:00:00:02
+#setenv usbnet_hostaddr f8:dc:7a:00:00:01
+#setenv ethact usb_ether
+#printenv usbnet_devaddr
+#printenv usbnet_hostaddr
+#printenv ethact
+echo [STAGE 1] ===== Configuring DHCP =====
+# Disable autoload to prevent dhcp from automatically downloading a kernel image from an autoconfigured server
+setenv autoload no
+# Disable auto-start since when auto-start is enabled, the tftp command attempts to lanuch the stage 2 bootloader
+# script as a kernel image, which,  of course, it isn't.
+setenv autostart no
+printenv autoload
+printenv autostart
+#dhcp
+echo [STAGE 1] ===== Configuring U-Boot =====
+setenv hostname uboot
+setenv netmask 255.255.255.0
+setenv serverip 192.168.1.10
+setenv gatewayip 192.168.2.2
+setenv ipaddr 192.168.2.3
+setenv dnsip 192.168.1.254
+setenv baudrate 115200
+setenv autoload yes
+printenv autoload
+printenv autostart
+printenv hostname
+printenv netmask
+printenv serverip
+printenv gatewayip
+printenv ipaddr
+printenv dnsip
+printenv fdtfile
+printenv loadaddr
+printenv baudrate
+printenv fdt_addr_r
+printenv fdt_addr
+printenv kernel_addr_r
+echo [STAGE 1] ===== Downloading ZX Raspberry stage 2 boot script from TFTP server =====
+tftp 0x01100000 boot.scr.uimg
+echo [STAGE 1] ===== Launching ZX Raspberry stage 2 script image =====
+source 0x01100000
+echo [STAGE 1] ===== ZX Raspberry stage 1 bootloader complete! =====

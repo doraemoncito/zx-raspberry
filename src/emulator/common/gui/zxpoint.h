@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2020-2022 Jose Hernandez
- * Copyright (c) 2017 José Luis Sanchez
  *
  * This file is part of ZxRaspberry.
  *
@@ -17,29 +16,27 @@
  * You should have received a copy of the GNU General Public License
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef ZXDISPLAY_H
-#define ZXDISPLAY_H
+#ifndef ZX_POINT_H
+#define ZX_POINT_H
 
-#include <cstdint>
-#include <circle/bcmframebuffer.h>
-#include <circle/types.h>
+class ZxPoint {
 
-class ZxDisplay {
 public:
-    ZxDisplay();
-    ~ZxDisplay();
-
-    bool Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer);
-    void update(bool flash);
-    void setBorder(uint8_t m_border);
+    ZxPoint();
+    ZxPoint(int x, int y);
+    ZxPoint &operator+=(const ZxPoint &adder);
+    ZxPoint &operator-=(const ZxPoint &subber);
+    friend ZxPoint operator-(const ZxPoint &one, const ZxPoint &two);
+    friend ZxPoint operator+(const ZxPoint &one, const ZxPoint &two);
+    friend bool operator==(const ZxPoint &one, const ZxPoint &two);
+    friend bool operator!=(const ZxPoint &one, const ZxPoint &two);
+    int getX() const;
+    int getY() const;
 
 private:
-    CBcmFrameBuffer *m_pFrameBuffer;
-    uint32_t *m_pBuffer;                // Address of frame buffer
-    uint32_t (*m_pScrTable)[256][256];  // lookup table
-    uint8_t *m_pVideoMem;               // Spectrum video memory
-    uint8_t m_border;                   // Border colour index
-    bool m_borderChanged;
+
+    int x, y;
+
 };
 
-#endif // ZXDISPLAY_H
+#endif // ZX_POINT_H

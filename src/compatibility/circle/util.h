@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2020-2022 Jose Hernandez
- * Copyright (c) 2017 José Luis Sanchez
  *
  * This file is part of ZxRaspberry.
  *
@@ -17,29 +16,20 @@
  * You should have received a copy of the GNU General Public License
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef ZXDISPLAY_H
-#define ZXDISPLAY_H
+#ifndef CIRCLE_UTIL_H
+#define CIRCLE_UTIL_H
 
+
+// Since C++ 11 this header provides all the size specific data types
 #include <cstdint>
-#include <circle/bcmframebuffer.h>
-#include <circle/types.h>
 
-class ZxDisplay {
-public:
-    ZxDisplay();
-    ~ZxDisplay();
+// This header inclusion provides the definition of size_t
+#include <cstdio>
 
-    bool Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer);
-    void update(bool flash);
-    void setBorder(uint8_t m_border);
 
-private:
-    CBcmFrameBuffer *m_pFrameBuffer;
-    uint32_t *m_pBuffer;                // Address of frame buffer
-    uint32_t (*m_pScrTable)[256][256];  // lookup table
-    uint8_t *m_pVideoMem;               // Spectrum video memory
-    uint8_t m_border;                   // Border colour index
-    bool m_borderChanged;
-};
+uint32_t bswap32(uint32_t ulValue);
+uint16_t bswap16(uint16_t usValue);
+void *memset(void *pBuffer, int nValue, size_t nLength);
 
-#endif // ZXDISPLAY_H
+
+#endif // CIRCLE_UTIL_H

@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2020-2022 Jose Hernandez
- * Copyright (c) 2017 José Luis Sanchez
  *
  * This file is part of ZxRaspberry.
  *
@@ -17,29 +16,28 @@
  * You should have received a copy of the GNU General Public License
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef ZXDISPLAY_H
-#define ZXDISPLAY_H
+#include "kernel.h"
+#include <circle/startup.h>
 
-#include <cstdint>
-#include <circle/bcmframebuffer.h>
-#include <circle/types.h>
+int main(void) {
 
-class ZxDisplay {
-public:
-    ZxDisplay();
-    ~ZxDisplay();
+    CKernel Kernel;
+    if (!Kernel.Initialize()) {
+        halt();
+        return EXIT_HALT;
+    }
 
-    bool Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer);
-    void update(bool flash);
-    void setBorder(uint8_t m_border);
+    TShutdownMode ShutdownMode = Kernel.Run();
 
-private:
-    CBcmFrameBuffer *m_pFrameBuffer;
-    uint32_t *m_pBuffer;                // Address of frame buffer
-    uint32_t (*m_pScrTable)[256][256];  // lookup table
-    uint8_t *m_pVideoMem;               // Spectrum video memory
-    uint8_t m_border;                   // Border colour index
-    bool m_borderChanged;
-};
+    switch (ShutdownMode) {
+        case ShutdownReboot:
+            reboot();
+            return EXIT_REBOOT;
 
-#endif // ZXDISPLAY_H
+        case ShutdownHalt:
+        default:
+            halt();
+            return EXIT_HALT;
+    }
+
+}

@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2020-2022 Jose Hernandez
- * Copyright (c) 2017 José Luis Sanchez
  *
  * This file is part of ZxRaspberry.
  *
@@ -17,29 +16,25 @@
  * You should have received a copy of the GNU General Public License
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef ZXDISPLAY_H
-#define ZXDISPLAY_H
+#ifndef ZXRASPBERRY_ZXHARDWAREMODEL48K_H
+#define ZXRASPBERRY_ZXHARDWAREMODEL48K_H
 
-#include <cstdint>
-#include <circle/bcmframebuffer.h>
-#include <circle/types.h>
 
-class ZxDisplay {
+#include "zxhardwaremodel.h"
+
+class ZxHardwareModel48k : public ZxHardwareModel {
+
 public:
-    ZxDisplay();
-    ~ZxDisplay();
+    ~ZxHardwareModel48k() override = default;
 
-    bool Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer);
-    void update(bool flash);
-    void setBorder(uint8_t m_border);
-
-private:
-    CBcmFrameBuffer *m_pFrameBuffer;
-    uint32_t *m_pBuffer;                // Address of frame buffer
-    uint32_t (*m_pScrTable)[256][256];  // lookup table
-    uint8_t *m_pVideoMem;               // Spectrum video memory
-    uint8_t m_border;                   // Border colour index
-    bool m_borderChanged;
+    std::string longModelName() override { return "ZX Spectrum 48K"; };
+    std::string shortModelName() override { return "48k"; };
+    uint32_t clockFrequency() override { return 3500000; };
+    uint32_t tStatesPerScreenFrame() override { return 69888; };
+    uint32_t tStatesPerScreenLine() override { return 224; };
+    uint32_t upBorderHeight() override { return 64; };
+    uint32_t tStatesToFirstScreenByte() override { return 14336; };
 };
 
-#endif // ZXDISPLAY_H
+
+#endif //ZXRASPBERRY_ZXHARDWAREMODEL48K_H

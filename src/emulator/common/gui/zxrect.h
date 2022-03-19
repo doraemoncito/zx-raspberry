@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2020-2022 Jose Hernandez
- * Copyright (c) 2017 José Luis Sanchez
  *
  * This file is part of ZxRaspberry.
  *
@@ -17,29 +16,35 @@
  * You should have received a copy of the GNU General Public License
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef ZXDISPLAY_H
-#define ZXDISPLAY_H
+#ifndef ZX_RECT_H
+#define ZX_RECT_H
 
-#include <cstdint>
-#include <circle/bcmframebuffer.h>
-#include <circle/types.h>
+#include "zxpoint.h"
 
-class ZxDisplay {
+class ZxRect {
+
 public:
-    ZxDisplay();
-    ~ZxDisplay();
-
-    bool Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer);
-    void update(bool flash);
-    void setBorder(uint8_t m_border);
+    ZxRect(int ax, int ay, int width, int height);
+    ZxRect(ZxPoint p1, ZxPoint p2);
+    ZxRect();
+    void move(int aDX, int aDY);
+    void grow(int aDX, int aDY);
+    void intersect(const ZxRect &r);
+    void Union(const ZxRect &r);
+    bool contains(const ZxPoint &p) const;
+    bool operator==(const ZxRect &r) const;
+    bool operator!=(const ZxRect &r) const;
+    bool isEmpty();
+    int getAx() const;
+    int getAy() const;
+    int getBx() const;
+    int getBy() const;
+    int getWidth() const;
+    int getHeight() const;
 
 private:
-    CBcmFrameBuffer *m_pFrameBuffer;
-    uint32_t *m_pBuffer;                // Address of frame buffer
-    uint32_t (*m_pScrTable)[256][256];  // lookup table
-    uint8_t *m_pVideoMem;               // Spectrum video memory
-    uint8_t m_border;                   // Border colour index
-    bool m_borderChanged;
+    ZxPoint a, b;
+
 };
 
-#endif // ZXDISPLAY_H
+#endif  // ZX_RECT_H

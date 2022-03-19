@@ -45,7 +45,7 @@ def usbfilter_exists(vendor_id, product_id)
     return vm_info.include? filter_match
 end
   
-def usbfilter_add_if_not_exists(vb, vendor_id, product_id, filter_name, manufacturer_name, product_name)
+def usbfilter_add_if_not_exists(vb, vendor_id, product_id, revision, filter_name, manufacturer_name, product_name)
     # This is a workaround for the fact VirtualBox doesn't provide
     # a way for preventing duplicate USB filters from being added.
     #
@@ -57,10 +57,15 @@ def usbfilter_add_if_not_exists(vb, vendor_id, product_id, filter_name, manufact
             "usbfilter", "add", "0",
             "--target", :id,
             "--name", filter_name,
+            "--action", "hold",
+            "--active", "yes",
             "--vendorid", vendor_id,
             "--productid", product_id,
-            "--manufacturer", manufacturer_name,
-            "--product", product_name
+# SKIP MATCHING ON THESE PARAMETERS TO STOP THE FILTER SEARCH FROM BECOMING TOO NARROW AND PREVENTING SOME DEVICE LIKE
+# THE ALTERA USB BLASTER FROM BEING ATTACHED AUTOMATICALLY WHEN PLUGGED-IN.
+#             "--revision", revision,
+#             "--manufacturer", manufacturer_name,
+#             "--product", product_name
         ]
     # -- DEBUG ONLY --
     # else
@@ -72,6 +77,10 @@ end
 # statement configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what you're doing.
 Vagrant.configure("2") do |config|
+
+    if Vagrant.has_plugin?("vagrant-vbguest")
+        config.vbguest.auto_update = false
+    end
 
     config.vm.provider "virtualbox"
 
@@ -90,14 +99,22 @@ Vagrant.configure("2") do |config|
         node.vm.network "public_network", bridge: 'en0: Wi-Fi (Wireless)', ip: "192.168.1.10"
 
         node.vm.provider "virtualbox" do |vb|
-            # No UI required, we just need to use the guest machine console.
+            # A UI required, i.e. we need both the guest machine console and GUI but enabling the GUI results in poor
+            # performance from the VM so we use RDP to display the graphical elements instead.
             vb.gui = false
 
-            vb.memory = 512
-            vb.cpus = 1
+            # [Enable remote desktop (compatible with Microsoft's RDP)](https://www.virtualbox.org/manual/ch07.html#vrde)
+            vb.customize ["modifyvm", :id, "--vrde", "on"]
 
-            # Set the paravirtualization provider to KVM for linux guest, this will enable hardware acceleration and
+            # We need to use at least 2G of RAM as recommended by the Intel Quartus release notes + an additional 2GB
+            # to give us some headroom:
+            # https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/rn/rn-qts-std-dev-support.pdf
+            vb.memory = 4096
+            vb.cpus = 4
+
+            # Set the para-virtualization provider to KVM for linux guest, this will enable hardware acceleration and
             # prevent excessive CPU utilisation on the host machine:
+            #
             # - [VirtualBox consuming 100% CPU even when the guest is idle](https://superuser.com/questions/809396/virtualbox-consuming-100-cpu-even-when-the-guest-is-idle)
             # - [Why does virtual box vboxheadless process using Vagrant use 100% of my cpu?](https://stackoverflow.com/questions/28293238/why-does-virtual-box-vboxheadless-process-using-vagrant-use-100-of-my-cpu)
             # - [VirtualBox manual - 10.3. Hardware Virtualization](https://www.virtualbox.org/manual/ch10.html#hwvirt)
@@ -111,37 +128,29 @@ Vagrant.configure("2") do |config|
             # Disable audio as we don't need it for cross-compilation and this will reduce resource consumption
             vb.customize ["modifyvm", :id, "--audio", "none"]
 
-            # Configure the graphics controller to remove the warning message in VirtualBox
-            vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
+            # Configure a graphics controller that can support a graphical desktop in VirtualBox and disable
+            # 3D acceleration
+            vb.customize ["modifyvm", :id, "--graphicscontroller", "VMSVGA"]
+            vb.customize ["modifyvm", :id, "--vram", "256"]
+            vb.customize ["modifyvm", :id, "--accelerate3d", "off"]
+            vb.customize ['setextradata', :id, 'GUI/LastGuestSizeHint','1920,1080']
+            vb.customize ['setextradata', :id, 'GUI/ScaleFactor', '1.00']
 
-            vb.customize ["modifyvm", :id, "--vram", "32"]
-            vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
-        end
-
-        # Enable the USB Controller in VirtualBox
-        config.vm.provider "virtualbox" do |vb|
+            # Enable the USB Controller in VirtualBox
             vb.customize ["modifyvm", :id, "--usb", "on"]
+
             # Enable USB 1.1 (OHCI).  NOTE: USB 2.0 (EHCI) and USB 3.0 (xHCI) require the free
             # but closed source VirtualBox Extension Pack (NOT the "platform packages")
             # [from the VirtualBox download page](http://www.virtualbox.org/wiki/Downloads).
             vb.customize ["modifyvm", :id, "--usbohci", "on"]
-        end
 
-        # Add the configuration for the [FTDI](https://en.wikipedia.org/wiki/FTDI) USB to serial remote interface
-        config.vm.provider "virtualbox" do |v|
-            usbfilter_add_if_not_exists(v, "0403", "6015", "FTDI FT231X USB UART [1000]", "FTDI", "FT231X USB UART")
-            # v.customize [
-            #     "usbfilter", "add", "0",
-            #     "--target", :id,
-            #     "--name", "FTDI FT231X USB UART [1000]",
-            #     "--action", "hold",
-            #     "--active", "yes",
-            #     "--vendorid", "0403",
-            #     "--productid", "6015",
-            #     "--revision", "1000",
-            #     "--manufacturer", "FTDI",
-            #     "--product", "FT231X USB UART"
-            # ]
+            # Add the configuration for the [FTDI](https://en.wikipedia.org/wiki/FTDI) USB to serial remote interface
+            usbfilter_add_if_not_exists(vb, "0403", "6015", "1000", "FTDI FT231X USB UART [1000]", "FTDI", "FT231X USB UART")
+
+            usbfilter_add_if_not_exists(vb, "0403", "6001", "1000", "FTDI FT232R USB UART [0600]", "FTDI", "FT232R USB UART")
+
+            # Add the configuration for the logic analyser
+            usbfilter_add_if_not_exists(vb, "0925", "3881", "0001", "Lakeview Research Saleae Logic [0001]", "Altera", "Lakeview Research Saleae Logic")
         end
 
         # Set the environment variable DEBIAN_FRONTEND to "noninteractive" to prevent debconf from trying to open stdin.

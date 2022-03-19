@@ -1,27 +1,29 @@
-//
-// zxdisplay.cpp
-//
-// Sinclair ZX Spectrum display emulator code by Jose Hernandez.
-// Based on code originally written by Jose Luis Sanchez.
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
+/*
+ * Copyright (c) 2020-2022 Jose Hernandez
+ * Copyright (c) 2017 José Luis Sanchez
+ *
+ * This file is part of ZxRaspberry.
+ *
+ * ZxRaspberry is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ZxRaspberry is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
+ */
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <circle/bcmframebuffer.h>
 #include <circle/util.h>
 #include "zxdisplay.h"
+
 
 ZxDisplay::ZxDisplay()
         : m_pFrameBuffer(nullptr),
@@ -30,6 +32,7 @@ ZxDisplay::ZxDisplay()
           m_border(0xFu),
           m_borderChanged(false) {
 }
+
 
 ZxDisplay::~ZxDisplay() {
     // Delete the video frame buffer
@@ -43,7 +46,8 @@ ZxDisplay::~ZxDisplay() {
     m_pFrameBuffer = nullptr;
 }
 
-boolean ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
+
+bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
 
     // lookup table
     m_pScrTable = reinterpret_cast<uint32_t (*)[256][256]>(new uint32_t[256][256]);
@@ -74,7 +78,7 @@ boolean ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer)
     m_pFrameBuffer->SetPalette(0xF, 0xFFFFu); // bright white
 
     if (!m_pFrameBuffer->Initialize()) {
-        return FALSE;
+        return false;
     }
 
     m_pBuffer = reinterpret_cast<uint32_t *>(m_pFrameBuffer->GetBuffer());
@@ -82,10 +86,22 @@ boolean ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer)
 
     std::memset(m_pBuffer, ((m_border << 0x4u) | m_border), m_pFrameBuffer->GetSize());
 
-    // Create a lookup table for draw the screen Faster Than Light :)
+    /*
+     * Create a lookup table for draw the screen Faster Than Light :)
+     *
+     * The attribute byte format is as follows:
+     *
+     *  | F | B | P2 | P1 | P0 | I2 | I1 | I0 |
+     *
+     * F sets the attribute FLASH mode
+     * B sets the attribute BRIGHTNESS mode
+     * P2 to P0 is the PAPER colour
+     * I2 to I0 is the INK colour
+     */
     for (int attr = 0; attr < 128; attr++) {
         unsigned ink = attr & 0x07;
         unsigned paper = (attr & 0x78) >> 3;
+        // Brighten up the ink colour if the brightness bit is on
         if (attr & 0x40) {
             ink |= 0x08;
         }
@@ -106,24 +122,36 @@ boolean ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer)
         }
     }
 
-    return TRUE;
+    return true;
 }
 
-void ZxDisplay::update(boolean flash) {
+
+void ZxDisplay::update(bool flash) {
+
     assert(m_pBuffer != nullptr);
     assert(m_pVideoMem != nullptr);
 
-    int bufIdx = 0x0585;
-    int attribute = 0x1800;  // Offset into colour attribute memory
+    /*
+     * Calculate the index into the frame buffer to perform fast translation of ZX Spectrum video memory to Raspberry Pi
+     * framebuffer memory.  The framebuffer pointer has 32 bits per element. e.g 8 pixels since each pixel takes 4 bits.
+     *
+     *      48 lines * 352 pixels per line + 48 border pixels = 16944 pixels
+     *      16944 pixels offset / 8 pixels per array element = 2118 array index = 0x0846 HEX
+     */
+    int bufIdx = 0x0846;
+
+    // Offset into the ZX Spectrum colour attribute memory (6144 bytes)
+    int attribute = 0x1800;
+
     static uint8_t flashMask[] = {0x7Fu, 0xFFu};
 
-    // TODO: eliminate branching to allow the code to run efficiently on the GPU.
+    // TODO: eliminate branching to allow this code to run efficiently on the Raspberry Pi's GPU
     if (m_borderChanged) {
         std::memset(m_pBuffer, ((m_border << 0x4u) | m_border), m_pFrameBuffer->GetSize());
         m_borderChanged = false;
     }
 
-    // The ZX Spectrum screen is made up of 3 blocks of 2048 bytes
+    // The ZX Spectrum screen is made up of 3 blocks of 2048 (0x0800) bytes each
     for (unsigned int block = 0x0000; block < 0x1800; block += 0x0800) {
         for (unsigned int row = 0x0000; row < 0x0100; row += 0x0020) {
             for (unsigned int column = 0x0000; column < 0x0020; column++) {
@@ -142,7 +170,9 @@ void ZxDisplay::update(boolean flash) {
     }
 }
 
+
 void ZxDisplay::setBorder(uint8_t border) {
+
     if (this->m_border != border) {
         this->m_borderChanged = true;
         this->m_border = border;

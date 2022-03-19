@@ -34,6 +34,10 @@ echo "Installing VirtualBox"
 brew cask install virtualbox
 
 echo
+echo "Installing the VirtualBox extension pack"
+brew install --cask virtualbox-extension-pack
+
+echo
 echo "Installing Vagrant"
 brew cask install vagrant
 
@@ -166,7 +170,23 @@ Please note that `arm-eabi` is deprecated and `arm-none-eabi` should instead be 
 
 ## Building U-Boot
 
-> **NOTE:** many of the step descibed in this section will be performed automatically during the development environment installation using Ansible.
+> **NOTE:** many of the step described in this section will be performed automatically during the development environment installation using Ansible.
+
+### Memory Layout
+
+```text
+0x0000 0000
+      :
+0x0000 8000     Kernel entry point (32 bit variant)
+      :
+0x0100 0000     U-Boot boot script stage 1
+      :
+0x0110 0000     U-Boot boot script stage 2
+      :
+0x23EF 3000     Flattened device tree blob (size 0xCFDA = 53210, e.g. < 64K)
+      :
+0xFFFF FFFF     End of memory (4GB)
+```
 
 ### Cross-compiling Das U-boot
 
@@ -270,12 +290,16 @@ cp u-boot.bin ../kernel8.img
 ```
 
 To enable U-Boot debug messages over the serial (UART) interface you will need to modify the the `config.txt` file on the root of the SD card used to boot and modify or append the following line:
+
 ```text
 enable_uart=1
 ```
-The final configuration may look something like this:
+
+The bottom few lines of the final configuration may look something like this:
 
 ```text
+...
+
 [pi4]
 # Enable DRM VC4 V3D driver on top of the dispmanx display stack
 dtoverlay=vc4-fkms-v3d
@@ -283,4 +307,70 @@ max_framebuffers=2
 
 [all]
 enable_uart=1
+```
+
+You will also need to copy the `vagrant/templates/sdcard/cmdline.txt` file to the root of the SD card.
+
+## Building ZX Raspberry on macOS
+
+```sh
+cd zx-raspberry
+mkdir cmake-build-macos
+cd cmake-build-macos
+cmake ..
+make clean all
+```
+
+The build process generates an executable file called `zxraspberry` that runs in a windows as shown in the image below.
+![ZX Raspberry running on macOS](assets/img/macos-automania-screenshot.png)
+
+
+## Cross-compiling the emulator for Raspberry Pi
+
+### Raspberry Pi 1
+
+>TODO:
+>```sh
+>cd zx-raspberry
+>mkdir cmake-build-raspi
+>cd cmake-build-raspi
+>cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-arm-none-eabi.cmake ..
+>make clean all
+>sudo cp zxraspberry.uimg /private/tftpboot/kernel.img
+>sudo cp zxraspberry.uimg /private/tftpboot/
+>```
+
+The following command outputs all the variables used in the build:
+`cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-arm-none-eabi.cmake ..`
+
+### Raspberry Pi 4
+
+32 bits:
+
+```sh
+cd zx-raspberry
+mkdir cmake-build-raspi
+cd cmake-build-raspi
+cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-arm-none-eabi.cmake ..
+make clean all
+sudo cp zxraspberry.uimg /private/tftpboot/kernel7l.img
+sudo cp zxraspberry.uimg /private/tftpboot/
+```
+
+>TODO: 64 bits:
+>
+> ```sh
+>cd zx-raspberry
+>mkdir cmake-build-raspi
+>cd cmake-build-raspi
+>cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-arm-aarch64-elf.cmake ..
+>make clean all
+>sudo cp zxraspberry.uimg /private/tftpboot/kernel8.img
+>sudo cp zxraspberry.uimg /private/tftpboot/
+>```
+
+## Debugging over the serial port
+
+```sh
+minicom -c on -b 115200 -o -D /dev/tty.usbserial-AD0JRLXD
 ```

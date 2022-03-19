@@ -1,3 +1,11 @@
+#echo ===== Configuring ethernet over USB =====
+#usb start
+#setenv usbnet_devaddr f8:dc:7a:00:00:02
+#setenv usbnet_hostaddr f8:dc:7a:00:00:01
+#setenv ethact usb_ether
+#printenv usbnet_devaddr
+#printenv usbnet_hostaddr
+#printenv ethact
 echo ===== Configuring DHCP =====
 # Disable autoload to prevent dhcp from automatically downloading a kernel image from an autoconfigured server
 setenv autoload no
