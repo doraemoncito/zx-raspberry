@@ -36,7 +36,7 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 include_directories(BEFORE ../../include)
 
 add_executable(
-        ${PROJECT_NAME}.elf
+        ${PROJECT_NAME}
         common/keyboard.h
         common/zxdisplay.h
         common/zxdisplay.cpp
@@ -127,7 +127,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
     )
 
     target_include_directories(
-            ${PROJECT_NAME}.elf PRIVATE
+            ${PROJECT_NAME} PRIVATE
             raspi
     )
 
@@ -136,7 +136,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
     #    )
 
     target_sources(
-            ${PROJECT_NAME}.elf PRIVATE
+            ${PROJECT_NAME} PRIVATE
             raspi/main.cpp
             raspi/kernel.cpp
             raspi/zxkeyboard.cpp
@@ -205,23 +205,23 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
 
     get_filename_component(OUTPUT_NAME ${PROJECT_NAME} NAME_WE)
     set_target_properties(
-            ${PROJECT_NAME}.elf
+            ${PROJECT_NAME}
             PROPERTIES
             OUTPUT_NAME ${OUTPUT_NAME}
-            SUFFIX ".elf"
+            SUFFIX ""
     )
 
 #    add_executable(${PROJECT_NAME}.elf main.cpp kernel.cpp)
 #    set(LIBS circle)
-    target_link_libraries(${PROJECT_NAME}.elf ${LIBS} ${EXTRA_LIBS})
-    generate_kernel_image(${PROJECT_NAME}.elf ${PROJECT_NAME}.elf)
+    target_link_libraries(${PROJECT_NAME} ${LIBS} ${EXTRA_LIBS})
+    generate_kernel_image(${PROJECT_NAME} ${PROJECT_NAME})
 
-#    generate_kernel_image(${PROJECT_NAME}.elf ${OUTPUT_NAME}.elf)
+#    generate_kernel_image(${PROJECT_NAME} ${OUTPUT_NAME}.elf)
 
 endif ()
 
 install(
-        TARGETS ${PROJECT_NAME}.elf
+        TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION "${CMAKE_BINARY_DIR}"
         BUNDLE DESTINATION "${CMAKE_BINARY_DIR}"
         LIBRARY DESTINATION "${CMAKE_BINARY_DIR}"
