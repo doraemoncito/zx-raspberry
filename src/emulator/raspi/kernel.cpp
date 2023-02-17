@@ -85,7 +85,7 @@ bool CKernel::Initialize(void) {
     m_Logger.Write(FromKernel, LogNotice, "                             |_|                         |___/ ");
     m_Logger.Write(FromKernel, LogNotice, " ");
     m_Logger.Write(FromKernel, LogNotice, "ZX Raspberry: a bare metal Sinclair ZX Spectrum emulator for Raspberry Pi");
-    m_Logger.Write(FromKernel, LogNotice, "Copyright (c) 2020-2022 Jose Hernandez");
+    m_Logger.Write(FromKernel, LogNotice, "Copyright (c) 2020-2023 Jose Hernandez");
     m_Logger.Write(FromKernel, LogNotice, "Build date: " __DATE__ " " __TIME__);
 
     if (bOK) {

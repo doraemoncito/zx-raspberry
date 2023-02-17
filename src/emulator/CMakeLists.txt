@@ -78,6 +78,8 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
             macos/zxemulatorscreen.h
             macos/zxemulatorwindow.cpp
             macos/zxemulatorwindow.h
+            macos/zxkeyboard.cpp
+            macos/zxkeyboard.h
             # TODO: move this to its own compatibility library
             ../compatibility/circle/logger.cpp
             ../compatibility/circle/util.cpp
@@ -212,7 +214,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
     )
 
 #    add_executable(${PROJECT_NAME}.elf main.cpp kernel.cpp)
-#    set(LIBS circle)
+#    set(LIBS circle)rm zx
     target_link_libraries(${PROJECT_NAME} ${LIBS} ${EXTRA_LIBS})
     generate_kernel_image(${PROJECT_NAME} ${PROJECT_NAME})
 

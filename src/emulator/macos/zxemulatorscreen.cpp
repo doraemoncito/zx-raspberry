@@ -17,7 +17,11 @@
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "zxemulatorscreen.h"
+#include "zxkeyboard.h"
 #include "common/Z80emu.h"
+#include "common/gui/zxdialog.h"
+#include "common/gui/zxlabel.h"
+#include "common/gui/zxrect.h"
 #include "circle/bcmframebuffer.h"
 #include <QPainter>
 #include <QtGlobal>
@@ -36,9 +40,15 @@ ZxEmulatorScreen::ZxEmulatorScreen(Z80emu *z80emu, QWidget *parent) : QWidget(pa
     setAutoFillBackground(true);
     bcmFrameBuffer = new CBcmFrameBuffer(352, 296, 4);
     m_zxDisplay.Initialize(m_z80emu->getRam() + 0x4000, bcmFrameBuffer);
+    m_zxKeyboard = new ZxKeyboard();
 
     // Set the focus on this widget so that we can get keyboard events
     setFocus();
+}
+
+ZxEmulatorScreen::~ZxEmulatorScreen() {
+
+    delete m_zxKeyboard;
 }
 
 
@@ -56,10 +66,13 @@ QSize ZxEmulatorScreen::sizeHint() const {
 
 void ZxEmulatorScreen::keyPressEvent(QKeyEvent *event) {
 
-   if (event->key() == Qt::Key_F1) {
+    if (event->key() == Qt::Key_F1) {
         showDialog = !showDialog;
         qDebug() << ((showDialog) ? "Showing About box" : "Hiding about box");
         repaint();
+    }
+    else {
+        m_zxKeyboard->keyPressEvent(*m_z80emu, *event);
     }
 }
 
@@ -78,12 +91,36 @@ void ZxEmulatorScreen::paintEvent(QPaintEvent * /* event */) {
     m_zxDisplay.setBorder(m_z80emu->getBorder());
     m_zxDisplay.update(flash);
 
-    /* Reads Raspberry Pi framebuffer and turns it into a QImage object.
-     *
-     * Image data in the framebuffer is stored linearly starting with pixel (0,0) on the top left and the moving right
-     * and down one pixel at a time.  In our particular example we have 2 pixels per byte and the bytes are out of
-     * sequence because they are stored as a single 32-bit unsigned integer instead of 4 individual bytes.
-     */
+    if (showDialog) {
+        auto zxDialog = ZxDialog(ZxRect(2, 12, 40, 10), "About ZX Raspberry");
+
+        /*
+         * The default printable characters (32 (space) to 127 (copyright)) are stored at the end of the Spectrum's ROM at
+         * memory address 15616 (0x3D00) to 16383 (0x3FFF) and are referenced by the system variable CHARS which can be
+         * found at memory address 23606/7. Interestingly, the value in CHARS is actually 256 bytes lower than the first
+         * byte of the space character so that referencing a printable ASCII character does not need to consider the first
+         * 32 characters. As such, the CHARS value (by default) holds the address 15360 (0x3C00).
+         *
+         * The UDG characters (Gr-A to Gr-U) are stored at the end of the Spectrum's RAM at memory address 65368 (0xFF58)
+         * to 65535 (0xFFFF). As such, POKEing this address range has immediate effect on the UDG characters. The USR
+         * keyword (when followed by a single quoted character) provides a quick method to reference these addresses from
+         * BASIC. As with the printable characters, the location of the UDG characters is stored in the system variable UDG.
+         *
+         * Reference: https://enacademic.com/dic.nsf/enwiki/513468
+         */
+        zxDialog.insert(new ZxLabel(ZxRect(1, 2, 1, 1), "ZX Raspberry version 0.0.1"));
+        zxDialog.insert(new ZxLabel(ZxRect(1, 3, 1, 1), "Copyright \x7F 2020-2023 Jose Hernandez"));
+        zxDialog.insert(new ZxLabel(ZxRect(1, 6, 1, 1), "Build date: " __DATE__ " " __TIME__));
+
+        zxDialog.draw(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()));
+    }
+
+/* Reads Raspberry Pi framebuffer and turns it into a QImage object.
+ *
+ * Image data in the framebuffer is stored linearly starting with pixel (0,0) on the top left and the moving right
+ * and down one pixel at a time.  In our particular example we have 2 pixels per byte and the bytes are out of
+ * sequence because they are stored as a single 32-bit unsigned integer instead of 4 individual bytes.
+ */
 #if BYTE_SWAP_DISABLED
     for (int i = 0; i < 296; i++) {
         for (int j = 0; j < 44; j++) {

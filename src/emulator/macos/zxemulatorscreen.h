@@ -27,6 +27,7 @@
 
 class CBcmFrameBuffer;
 class Z80emu;
+class ZxKeyboard;
 
 /* RENAME THIS CLASS TO EmulatorScreen */
 
@@ -35,6 +36,7 @@ Q_OBJECT
 
 public:
     explicit ZxEmulatorScreen(Z80emu *z80emu, QWidget *parent = nullptr);
+    ~ZxEmulatorScreen();
 
     [[nodiscard]] QSize minimumSizeHint() const override;
     [[nodiscard]] QSize sizeHint() const override;
@@ -50,6 +52,7 @@ private:
     bool showDialog = false;
 
     Z80emu *m_z80emu;
+    ZxKeyboard *m_zxKeyboard;
     ZxDisplay m_zxDisplay;
     CBcmFrameBuffer *bcmFrameBuffer = nullptr;
 

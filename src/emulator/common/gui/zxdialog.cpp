@@ -15,6 +15,10 @@ ZxDialog::ZxDialog(ZxRect const &bounds, const char *title) : ZxGroup(bounds), t
 }
 
 void ZxDialog::drawFrame(uint8_t *buffer, unsigned int x, unsigned int y, unsigned int width, unsigned int height) {
+
+    uint8_t ink = 0xA;
+    uint8_t paper = 0xF;
+
     // Top line
     char line[44 + 1];
     sprintf(line, "\xAF\xAF %s \xAB", title);
@@ -22,7 +26,7 @@ void ZxDialog::drawFrame(uint8_t *buffer, unsigned int x, unsigned int y, unsign
         line[x1] = '\xA3';
     line[width - 1] = '\xA7';
     line[width] = 0x00;
-    printText(buffer, x, y, 0x0, 0xF, reinterpret_cast<char const *>(line));
+    printText(buffer, x, y, ink, paper, reinterpret_cast<char const *>(line));
 
     // Bottom line
     char line2[44 + 1] = "\xAE";
@@ -30,7 +34,7 @@ void ZxDialog::drawFrame(uint8_t *buffer, unsigned int x, unsigned int y, unsign
         line2[x1] = '\xAC';
     line2[width - 1] = '\xAD';
     line2[width] = 0x00;
-    printText(buffer, x, y + height - 1, 0x0, 0xF, line2);
+    printText(buffer, x, y + height - 1, ink, paper, line2);
 
     char line3[44 + 1];
     for (unsigned int f=0; f < width; f++)
@@ -39,9 +43,9 @@ void ZxDialog::drawFrame(uint8_t *buffer, unsigned int x, unsigned int y, unsign
     line3[width - 1] = '\xA5';
     line3[width] = '\x00';
     for (unsigned y1 = y + 1; y1 < y + height - 1; y1++) {
-        printText(buffer, x, y1, 0x0, 0xF, line3);
-//        printText(buffer, x, y1, 0x0, 0xF, "\xAA");
-//        printText(buffer, x + width - 1, y1, 0x0, 0xF, "\xA5");
+        printText(buffer, x, y1, ink, paper, line3);
+//        printText(buffer, x, y1, ink, paper, "\xAA");
+//        printText(buffer, x + width - 1, y1, ink, paper, "\xA5");
     }
 }
 

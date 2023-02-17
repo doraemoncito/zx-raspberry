@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 Jose Hernandez
+ * Copyright (c) 2020-2023 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -16,24 +16,19 @@
  * You should have received a copy of the GNU General Public License
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef ZX_GROUP_H
-#define ZX_GROUP_H
+#ifndef ZXKEYBOARD_H
+#define ZXKEYBOARD_H
 
+class QKeyEvent;
+class Z80emu;
 
-#include "zxview.h"
-
-class ZxGroup : public ZxView {
+// TODO: rename this class KeyboardMapper or KeyboardAdapter?
+class ZxKeyboard {
 
 public:
-    ZxGroup(ZxRect const &bounds);
-    void insert(ZxView *child);
-    void draw(uint8_t *buffer) override;
-
-private:
-    int numChildren;
-    ZxView *children[10]{};
+    void keyPressEvent(Z80emu &zxRaspberry, QKeyEvent &event);
 
 };
 
 
-#endif //ZX_GROUP_H
+#endif //ZXKEYBOARD_H

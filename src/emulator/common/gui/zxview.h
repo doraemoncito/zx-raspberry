@@ -29,7 +29,7 @@ public:
     ZxView(ZxRect const &bounds);
     virtual ~ZxView();
     void printText(unsigned char *buffer, unsigned int column, unsigned int row, unsigned char ink, unsigned char paper,
-                   char const *text);
+                   char const *text) const;
     void clear(uint8_t *buffer, uint8_t paper);
     virtual void draw(uint8_t *buffer) = 0;
 

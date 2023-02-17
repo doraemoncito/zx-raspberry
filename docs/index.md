@@ -61,7 +61,7 @@ To create a Vagrant box (i.e. linux virtual machine) with a fully configured dev
 vagrant up
 ```
 
-If the operation is successful you will see output similar to this after a few minutes:
+If the operation is successful, you will see output similar to this after a few minutes:
 
 ```text
 No SSH key found. You will need to remedy this before pushing to the repository.
@@ -371,6 +371,14 @@ sudo cp zxraspberry.uimg /private/tftpboot/
 
 ## Debugging over the serial port
 
+On macOS:
+
 ```sh
 minicom -c on -b 115200 -o -D /dev/tty.usbserial-AD0JRLXD
+```
+
+On Linux:
+
+```sh
+minicom -c on -b 115200 -o -D /dev/ttyUSB0 
 ```

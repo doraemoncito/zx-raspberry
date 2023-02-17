@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 Jose Hernandez
+ * Copyright (c) 2020-2023 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -64,7 +64,7 @@ void ZxView::clear(uint8_t *buffer, uint8_t paper) {
     uint8_t background = paper;
 
     // Combination of 2 pixels stored in a single byte as a group of 2 elements of 4 bits representing the paper colour.
-    uint8_t twinColouredPixel = static_cast<uint8_t>(static_cast<uint8_t>(background << 0x4u) | background);
+    auto twinColouredPixel = static_cast<uint8_t>(static_cast<uint8_t>(background << 0x4u) | background);
 
     auto parent = this->parent();
     ZxRect bounds;
@@ -104,7 +104,7 @@ void ZxView::clear(uint8_t *buffer, uint8_t paper) {
  * - [Character Graphics on the ZX Spectrum](https://link.springer.com/chapter/10.1007/978-1-349-06763-3_6)
  * - [ZX Basic Manual. CHAPTER 14: The Character Set](https://www.worldofspectrum.org/ZXBasicManual/zxmanchap14.html)
  */
-void ZxView::printText(uint8_t *buffer, unsigned int column, unsigned int row, uint8_t ink, uint8_t paper, char const *text) {
+void ZxView::printText(uint8_t *buffer, unsigned int column, unsigned int row, uint8_t ink, uint8_t paper, char const *text) const {
 
     auto parent = this->parent();
     ZxRect bounds;
