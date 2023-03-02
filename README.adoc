@@ -1,4 +1,4 @@
-= image:docs/assets/img/zx_raspberry_green_200x200.png[ZX Raspberry Logo,100] *Zx Raspberry*
+= image:docs/assets/img/zx_raspberry_green_200x200.png[ZX Raspberry Logo,100] *ZX Raspberry*
 
 https://masterminds.github.io/stability/experimental.html[image:https://masterminds.github.io/stability/experimental.svg[]]
 

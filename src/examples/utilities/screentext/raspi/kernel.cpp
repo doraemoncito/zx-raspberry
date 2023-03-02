@@ -64,7 +64,7 @@ boolean CKernel::Initialize (void)
 	return bOK;
 }
 
-TShutdownMode CKernel::Run (void)
+[[noreturn]] TShutdownMode CKernel::Run (void)
 {
 	m_Logger.Write (FromKernel, LogNotice, "Compile time: " __DATE__ " " __TIME__);
 

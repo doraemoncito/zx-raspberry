@@ -44,7 +44,7 @@ public:
 
 	boolean Initialize (void);
 
-	TShutdownMode Run (void);
+    [[noreturn]] TShutdownMode Run (void);
 
 private:
 	// do not change this order

@@ -26,7 +26,7 @@ class JoystickAdapter {
 
 public:
     virtual std::string name() = 0;
-    virtual void handleJoystickEvent(unsigned nDeviceIndex, const TGamePadState &pState) {};
+    virtual void handleJoystickEvent(unsigned /* nDeviceIndex */, const TGamePadState & /*pState*/) {};
 
 protected:
     bool isAxisButtonReleased(const TGamePadState &pState, TGamePadButton button, TGamePadAxis axis);

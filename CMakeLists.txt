@@ -284,6 +284,7 @@ endforeach ()
 
 function(generate_kernel_image PROJECT_NAME OUTPUT_NAME)
 
+    # "_WE" in variable names is used to indicate the name without extension
     #message(STATUS "generate_kernel_image arguments: ${PROJECT_NAME}, followed by ${ARGN}")
     get_filename_component(OUTPUT_NAME_WE ${OUTPUT_NAME} NAME_WE)
 
@@ -355,7 +356,7 @@ function(generate_kernel_image PROJECT_NAME OUTPUT_NAME)
             COMMAND mkimage -n "ZX Raspberry ${VERSION_STR}" -A arm -O linux -T kernel -C none -a ${LOAD_ADDR} -e ${ENTRY_POINT} -d ${OUTPUT_NAME_WE}.img ${OUTPUT_NAME_WE}.uimg && mv ${OUTPUT_NAME_WE}.uimg "${CMAKE_BINARY_DIR}/"
             # NOTE: to send a compressed kernel image we need to pass the `-C gzip -d ${OUTPUT_NAME_WE}.img.gz` arguments to mkimage
             # COMMAND mkimage -n "ZX Raspberry ${VERSION_STR}" -A arm -O linux -T kernel -C gzip -a ${LOAD_ADDR} -e ${ENTRY_POINT} -d ${OUTPUT_NAME_WE}.img.gz ${OUTPUT_NAME_WE}.uimg && mv ${OUTPUT_NAME_WE}.uimg "${CMAKE_BINARY_DIR}/"
-            COMMENT "  U-BOOT ${OUTPUT_NAME_WE}.img => ${OUTPUT_NAME_WE}.uimg"
+            COMMENT "  UIMG   ${OUTPUT_NAME_WE}.img => ${OUTPUT_NAME_WE}.uimg"
             VERBATIM
     )
 

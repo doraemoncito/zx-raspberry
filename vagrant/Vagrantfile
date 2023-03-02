@@ -109,7 +109,8 @@ Vagrant.configure("2") do |config|
             # We need to use at least 2G of RAM as recommended by the Intel Quartus release notes + an additional 2GB
             # to give us some headroom:
             # https://www.intel.com/content/dam/www/programmable/us/en/pdfs/literature/rn/rn-qts-std-dev-support.pdf
-            vb.memory = 4096
+            #vb.memory = 4096
+            vb.memory = 8192
             vb.cpus = 4
 
             # Set the para-virtualization provider to KVM for linux guest, this will enable hardware acceleration and

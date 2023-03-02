@@ -27,11 +27,11 @@ std::string CursorJoystickAdapter::name() {
 void CursorJoystickAdapter::handleJoystickEvent(unsigned int nDeviceIndex, const TGamePadState &pState) {
 
     uint8_t port_F7FE = 0xFFu;
-    uint8_t port_FBFE = 0xFFu;
-    uint8_t port_FDFE = 0xFFu;
-    uint8_t port_FEFE = 0xFFu;
+//    uint8_t port_FBFE = 0xFFu;
+//    uint8_t port_FDFE = 0xFFu;
+//    uint8_t port_FEFE = 0xFFu;
     uint8_t port_EFFE = 0xFFu;
-    uint8_t port_DFFE = 0xFFu;
+//    uint8_t port_DFFE = 0xFFu;
     uint8_t port_BFFE = 0xFFu;
     uint8_t port_7FFE = 0xFFu;
 

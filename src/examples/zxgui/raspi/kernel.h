@@ -17,49 +17,70 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _kernel_h
-#define _kernel_h
+#ifndef KERNEL_H
+#define KERNEL_H
 
-#include <circle/memory.h>
 #include <circle/actled.h>
+#include <circle/koptions.h>
 #include <circle/devicenameservice.h>
 #include <circle/serial.h>
 #include <circle/exceptionhandler.h>
 #include <circle/interrupt.h>
 #include <circle/timer.h>
 #include <circle/logger.h>
+#include <circle/usb/usbhcidevice.h>
+#include <circle/usb/usbkeyboard.h>
 #include <circle/types.h>
 #include <zxdisplay.h>
 
-enum TShutdownMode
-{
-	ShutdownNone,
-	ShutdownHalt,
-	ShutdownReboot
+enum TShutdownMode {
+    ShutdownNone,
+    ShutdownHalt,
+    ShutdownReboot
 };
 
-class CKernel
-{
+class CBcmFrameBuffer;
+
+
+class CKernel {
 public:
-	CKernel (void);
-	~CKernel (void);
+    CKernel();
+    ~CKernel();
+    boolean Initialize();
 
-	boolean Initialize (void);
-
-	TShutdownMode Run (void);
+    [[noreturn]] TShutdownMode Run();
 
 private:
-	// do not change this order
-	CMemorySystem		m_Memory;
-	CActLED			m_ActLED;
-	CDeviceNameService	m_DeviceNameService;
-	CSerialDevice		m_Serial;
-	CExceptionHandler	m_ExceptionHandler;
-	CInterruptSystem	m_Interrupt;
-	CTimer			m_Timer;
-	CLogger			m_Logger;
+    static void KeyPressedHandler(const char *pString);
+    static void ShutdownHandler();
+    static void KeyStatusHandlerRaw(unsigned char ucModifiers, const unsigned char RawKeys[6]);
+    static void KeyboardRemovedHandler(CDevice *pDevice, void *pContext);
 
-	ZxDisplay		m_zxDisplay;
+    // do not change this order
+    CActLED m_ActLED;
+    CKernelOptions m_Options;
+    CDeviceNameService m_DeviceNameService;
+    CSerialDevice m_Serial;
+    CExceptionHandler m_ExceptionHandler;
+    CInterruptSystem m_Interrupt;
+    CTimer m_Timer;
+    CLogger m_Logger;
+    CUSBHCIDevice m_USBHCI;
+
+    CUSBKeyboardDevice *volatile m_pKeyboard;
+
+    volatile TShutdownMode m_ShutdownMode;
+
+    static CKernel *s_pThis;
+
+    CBcmFrameBuffer *m_pBcmFrameBuffer{};
+    ZxDisplay m_zxDisplay;
+    boolean m_showDialog;
+
+    // Keyboard support
+    unsigned char m_ucModifiers{};
+    unsigned char m_rawKeys[6]{};
+
 };
 
-#endif
+#endif // KERNEL_H

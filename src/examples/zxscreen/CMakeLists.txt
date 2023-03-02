@@ -18,6 +18,13 @@ add_executable(
         ../../compatibility/circle/util.cpp
 )
 
+include_directories(
+        BEFORE
+        ../../emulator/
+        ../../emulator/common
+        ../../emulator/include
+)
+
 # Use Qt and our Circle compatibility library in MacOS builds
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
@@ -35,7 +42,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     include_directories(
             BEFORE
             ../../compatibility
-            ../../emulator
     )
     target_link_libraries(zxscreen PUBLIC Qt6::Widgets)
 
@@ -47,12 +53,12 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
     set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
     set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "")
 
-    # FIXME: make this relative
-    set(INCLUDE_PREFIX "/home/vagrant/src/z80cpp/build")
-    set(NEWLIB_ARCH "arm-none-circle")
-    #    set( NEWLIB_ARCH "aarch64-none-circle" )
-    set(NEWLIBDIR "${INCLUDE_PREFIX}/../../circle-stdlib/install/${NEWLIB_ARCH}")
-    set(CIRCLEHOME "${INCLUDE_PREFIX}/../../circle-stdlib/libs/circle")
+#    # FIXME: make this relative
+#    set(INCLUDE_PREFIX "/home/vagrant/src/z80cpp/build")
+#    set(NEWLIB_ARCH "arm-none-circle")
+#    #    set( NEWLIB_ARCH "aarch64-none-circle" )
+#    set(NEWLIBDIR "${INCLUDE_PREFIX}/../../circle-stdlib/install/${NEWLIB_ARCH}")
+#    set(CIRCLEHOME "${INCLUDE_PREFIX}/../../circle-stdlib/libs/circle")
 
     include_directories(
             BEFORE
@@ -61,7 +67,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
     )
 
     include_directories(
-            shared
+            common
     )
 
     target_include_directories(
@@ -69,32 +75,32 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
             raspberrypi
     )
 
-    set(LIBS
-            "${NEWLIBDIR}/lib/libc.a"
-            "${NEWLIBDIR}/lib/libcirclenewlib.a"
-            "${NEWLIBDIR}/lib/libg.a"
-            "${NEWLIBDIR}/lib/libm.a"
-            "${NEWLIBDIR}/lib/libnosys.a"
-            "${CIRCLEHOME}/addon/SDCard/libsdcard.a"
-            "${CIRCLEHOME}/lib/bt/libbluetooth.a"
-            "${CIRCLEHOME}/lib/fs/fat/libfatfs.a"
-            "${CIRCLEHOME}/lib/fs/libfs.a"
-            "${CIRCLEHOME}/lib/input/libinput.a"
-            "${CIRCLEHOME}/lib/libcircle.a"
-            "${CIRCLEHOME}/lib/net/libnet.a"
-            "${CIRCLEHOME}/lib/sched/libsched.a"
-            "${CIRCLEHOME}/lib/usb/libusb.a"
-            "/usr/local/opt/gcc-arm-8.2-2019.01-x86_64-arm-eabi/bin/../lib/gcc/arm-eabi/8.2.1/../../../../arm-eabi/lib/arm/v5te/hard/libstdc++.a"
-            "/usr/local/opt/gcc-arm-8.2-2019.01-x86_64-arm-eabi/bin/../lib/gcc/arm-eabi/8.2.1/arm/v5te/hard/libgcc.a"
-            #        "/usr/local/opt/gcc-arm-8.3-2019.03-x86_64-aarch64-elf/aarch64-elf/lib/libstdc++.a"
-            #        "/usr/local/opt/gcc-arm-8.3-2019.03-x86_64-aarch64-elf/lib/gcc/aarch64-elf/8.3.0/libgcc.a"
-            #        "/usr/local/opt/gcc-arm-9.2-2019.12-x86_64-arm-none-eabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/arm/v5te/hard/libstdc++.a"
-            #        "/usr/local/opt/gcc-arm-9.2-2019.12-x86_64-arm-none-eabi/bin/../lib/gcc/arm-none-eabi/9.2.1/arm/v5te/hard/libgcc.a"
-            )
-
-    set(EXTRALIBS
-            z80cpp-static
-            )
+#    set(LIBS
+#            "${NEWLIBDIR}/lib/libc.a"
+#            "${NEWLIBDIR}/lib/libcirclenewlib.a"
+#            "${NEWLIBDIR}/lib/libg.a"
+#            "${NEWLIBDIR}/lib/libm.a"
+#            "${NEWLIBDIR}/lib/libnosys.a"
+#            "${CIRCLEHOME}/addon/SDCard/libsdcard.a"
+#            "${CIRCLEHOME}/lib/bt/libbluetooth.a"
+#            "${CIRCLEHOME}/lib/fs/fat/libfatfs.a"
+#            "${CIRCLEHOME}/lib/fs/libfs.a"
+#            "${CIRCLEHOME}/lib/input/libinput.a"
+#            "${CIRCLEHOME}/lib/libcircle.a"
+#            "${CIRCLEHOME}/lib/net/libnet.a"
+#            "${CIRCLEHOME}/lib/sched/libsched.a"
+#            "${CIRCLEHOME}/lib/usb/libusb.a"
+#            "/usr/local/opt/gcc-arm-8.2-2019.01-x86_64-arm-eabi/bin/../lib/gcc/arm-eabi/8.2.1/../../../../arm-eabi/lib/arm/v5te/hard/libstdc++.a"
+#            "/usr/local/opt/gcc-arm-8.2-2019.01-x86_64-arm-eabi/bin/../lib/gcc/arm-eabi/8.2.1/arm/v5te/hard/libgcc.a"
+#            #        "/usr/local/opt/gcc-arm-8.3-2019.03-x86_64-aarch64-elf/aarch64-elf/lib/libstdc++.a"
+#            #        "/usr/local/opt/gcc-arm-8.3-2019.03-x86_64-aarch64-elf/lib/gcc/aarch64-elf/8.3.0/libgcc.a"
+#            #        "/usr/local/opt/gcc-arm-9.2-2019.12-x86_64-arm-none-eabi/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/lib/arm/v5te/hard/libstdc++.a"
+#            #        "/usr/local/opt/gcc-arm-9.2-2019.12-x86_64-arm-none-eabi/bin/../lib/gcc/arm-none-eabi/9.2.1/arm/v5te/hard/libgcc.a"
+#            )
+#
+#    set(EXTRALIBS
+#            z80cpp-static
+#            )
 
     target_sources(
             zxscreen PRIVATE
@@ -161,8 +167,10 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
             TARGET ${PROJECT_NAME}
             # Run after the kernel has been built
             POST_BUILD
-            COMMAND mkimage -n "Sinclair ZX (Spectrum) Pi" -A arm -O linux -T kernel -C none -a 0x0000 -e 0x8000 -d ${PROJECT_NAME} /tmp/boot.scr.uimg && mv /tmp/boot.scr.uimg .
-            COMMENT "  U-Boot boot.scr.uimg"
+#            COMMAND mkimage -n "ZX Screen" -A arm -O linux -T kernel -C none -a 0x0000 -e 0x8000 -d ${PROJECT_NAME} /tmp/boot.scr.uimg && mv /tmp/boot.scr.uimg .
+#            COMMENT "  U-Boot boot.scr.uimg"
+            COMMAND mkimage -n "ZX Screen" -A arm -O linux -T kernel -C none -a 0x8000 -e 0x8000 -d kernel.img zxscreen.uimg && mv zxscreen.uimg "${CMAKE_BINARY_DIR}/"
+            COMMENT "  UIMG   kernel.img => zxscreen.uimg"
             VERBATIM
     )
 

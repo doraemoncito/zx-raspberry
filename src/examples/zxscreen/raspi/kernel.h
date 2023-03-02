@@ -17,8 +17,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _kernel_h
-#define _kernel_h
+#ifndef KERNEL_H
+#define KERNEL_H
 
 #include <circle/memory.h>
 #include <circle/actled.h>
@@ -29,7 +29,7 @@
 #include <circle/timer.h>
 #include <circle/logger.h>
 #include <circle/types.h>
-#include <SpectrumScreen.h>
+#include "zxdisplay.h"
 
 enum TShutdownMode
 {
@@ -38,28 +38,29 @@ enum TShutdownMode
 	ShutdownReboot
 };
 
+class CBcmFrameBuffer;
+
 class CKernel
 {
 public:
-	CKernel (void);
-	~CKernel (void);
-
-	boolean Initialize (void);
-
-	TShutdownMode Run (void);
+	CKernel();
+	~CKernel();
+	boolean Initialize();
+    [[noreturn]] TShutdownMode Run();
 
 private:
 	// do not change this order
-	CMemorySystem		m_Memory;
-	CActLED			m_ActLED;
-	CDeviceNameService	m_DeviceNameService;
-	CSerialDevice		m_Serial;
-	CExceptionHandler	m_ExceptionHandler;
-	CInterruptSystem	m_Interrupt;
-	CTimer			m_Timer;
-	CLogger			m_Logger;
+	CMemorySystem m_Memory;
+	CActLED m_ActLED;
+	CDeviceNameService m_DeviceNameService;
+	CSerialDevice m_Serial;
+	CExceptionHandler m_ExceptionHandler;
+	CInterruptSystem m_Interrupt;
+	CTimer m_Timer;
+	CLogger m_Logger;
 
-	CSpectrumScreen		m_SpectrumScreen;
+    CBcmFrameBuffer *m_pBcmFrameBuffer{};
+    ZxDisplay m_zxDisplay;
 };
 
-#endif
+#endif // KERNEL_H

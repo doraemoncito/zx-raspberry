@@ -31,6 +31,7 @@
 #include <circle/timer.h>
 #include <circle/logger.h>
 #include <circle/usb/usbhcidevice.h>
+#include <circle/usb/usbkeyboard.h>
 #include <circle/usb/usbgamepad.h>
 #include <circle/types.h>
 #include "zxdisplay.h"
@@ -48,14 +49,16 @@ enum TShutdownMode {
 
 class CKernel {
 public:
-    CKernel(void);
-    ~CKernel(void);
-    bool Initialize(void);
-    TShutdownMode Run(void);
+    CKernel();
+    ~CKernel();
+    bool Initialize();
+
+    [[noreturn]] TShutdownMode Run();
 
 private:
+
     // do not change this order
-    CMemorySystem m_Memory;
+//    CMemorySystem *m_Memory;
     CActLED m_ActLED;
     CKernelOptions m_Options;
     CDeviceNameService m_DeviceNameService;
@@ -66,19 +69,21 @@ private:
     CLogger m_Logger;
     CUSBHCIDevice m_USBHCI;
 
+    CUSBKeyboardDevice * volatile m_pKeyboard{};
+
     // Keyboard support
     unsigned char m_ucModifiers;
-    unsigned char m_rawKeys[6];
+    unsigned char m_rawKeys[6]{};
 
     // Gamepad support
     CUSBGamePadDevice *m_pGamePad;
-    TGamePadState m_GamePadState;
-    int m_nPosX;
-    int m_nPosY;
+    TGamePadState m_GamePadState{};
+    int m_nPosX{};
+    int m_nPosY{};
 
     ZxDisplay m_zxDisplay;
-    CBcmFrameBuffer *bcmFrameBuffer;
-    Z80emu *z80emu;
+    CBcmFrameBuffer *bcmFrameBuffer{};
+    Z80emu *z80emu{};
 
     TShutdownMode m_ShutdownMode = ShutdownNone;
 
@@ -87,14 +92,14 @@ private:
     // TODO: move the keyboard handling routines to their own class
     static void KeyPressedHandler(const char *pString);
 
-    static void ShutdownHandler(void);
+    static void ShutdownHandler();
 
     static void KeyStatusHandlerRaw(unsigned char ucModifiers, const unsigned char RawKeys[6]);
 
     // TODO: move the gamepad handling routines to their own class
     static void gamePadStatusHandler(unsigned nDeviceIndex, const TGamePadState *pState);
 
-    ZxHardwareModel *spectrumModel;
+    ZxHardwareModel *spectrumModel{};
 
     /* TODO: MOVE THESE CONSTANTS TO A SHARED MULTI-PLATFORM LOCATION.
      *
@@ -126,8 +131,8 @@ private:
     int BITMAP_DATA_SIZE = 0x1800;      // 6144 bytes
     int ATTRIBUTE_DATA_SIZE = 0x0300;   // 768 bytes
 
-    int tStatesToScreenPixel48k(int tstates);
-    void buildScreenTables48k();
+//    int tStatesToScreenPixel48k(int tstates);
+//    void buildScreenTables48k();
 
     // Tabla que contiene la dirección de pantalla del primer byte de cada
     // carácter en la columna cero.
@@ -135,24 +140,24 @@ private:
 
     // Tabla de traslación entre t-states y la dirección de la pantalla del
     // Spectrum que se vuelca en ese t-state o -1 si no le corresponde ninguna.
-    uint32_t *states2scr;
+    uint32_t *states2scr{};
     // Tabla de traslación de t-states al pixel correspondiente del borde.
-    uint32_t *states2border;
+    uint32_t *states2border{};
 
-    uint8_t *delayTstates;
+    uint8_t *delayTstates{};
 
     // T-state sequence we need to run to update the screen
-    uint32_t *stepStates;
-    uint32_t step;
+    uint32_t *stepStates{};
+    uint32_t step{};
     // Constante que indica que no hay un evento próximo
     // El valor de la constante debe ser mayor que cualquier spectrumModel.tstatesframe
     uint32_t NO_EVENT = 0xFFFFFFFF;
     // t-states del próximo evento
     uint32_t nextEvent = NO_EVENT;
 
-    uint32_t firstBorderUpdate;
-    uint32_t lastBorderUpdate;
-    int borderMode;
+    uint32_t firstBorderUpdate{};
+    uint32_t lastBorderUpdate{};
+    int borderMode{};
 
 };
 

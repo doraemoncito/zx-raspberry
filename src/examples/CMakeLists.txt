@@ -8,9 +8,9 @@ endif ()
 
 # MacOS builds only...
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
-    add_subdirectory(zxscreen)
     add_subdirectory(zxtext)
 endif()
 
 # Both platforms, i.e. MacOS and bare metal Raspberry Pi
+add_subdirectory(zxscreen)
 add_subdirectory(zxgui)

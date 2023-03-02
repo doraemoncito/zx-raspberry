@@ -166,7 +166,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
     )
 
     set(KERNEL_IMG kernel7l.img)
-    set(LOAD_ADDR 0x00008000)
+    # WARNING: the emulator will simply lockup before its gets started unless the load address is 0x0
+    set(LOAD_ADDR 0x00000000)
     set(ENTRY_POINT 0x00008000)
 
     # google search "cmake target_objects example"

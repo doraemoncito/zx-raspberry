@@ -23,10 +23,10 @@ add_executable(
         ../../emulator/common/gui/zxview.h
         ../../emulator/common/gui/zxgroup.cpp
         ../../emulator/common/gui/zxgroup.h
-        common/ViajeAlCentroDeLaTierraScr.h
         ../../emulator/common/zx48k_rom.cpp
         ../../emulator/common/zxdisplay.cpp
         ../../compatibility/circle/util.cpp
+        common/ViajeAlCentroDeLaTierraScr.h
 )
 
 include_directories(
@@ -178,8 +178,10 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
             TARGET ${PROJECT_NAME}
             # Run after the kernel has been built
             POST_BUILD
-            COMMAND mkimage -n "Sinclair ZX (Spectrum) Pi" -A arm -O linux -T kernel -C none -a 0x0000 -e 0x8000 -d ${PROJECT_NAME} /tmp/boot.scr.uimg && mv /tmp/boot.scr.uimg .
-            COMMENT "  U-Boot boot.scr.uimg"
+#            COMMAND mkimage -n "Sinclair ZX (Spectrum) Pi" -A arm -O linux -T kernel -C none -a 0x8000 -e 0x8000 -d ${PROJECT_NAME} /tmp/boot.scr.uimg && mv /tmp/boot.scr.uimg .
+#            COMMENT "  U-Boot boot.scr.uimg"
+            COMMAND mkimage -n "ZX GUI" -A arm -O linux -T kernel -C none -a 0x8000 -e 0x8000 -d kernel.img zxgui.uimg && mv zxgui.uimg "${CMAKE_BINARY_DIR}/"
+            COMMENT "  UIMG   kernel.img => zxgui.uimg"
             VERBATIM
     )
 

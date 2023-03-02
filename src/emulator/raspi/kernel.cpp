@@ -43,16 +43,16 @@
 
 static const char FromKernel[] = "kernel";
 
-CKernel *CKernel::s_pThis = 0;
+CKernel *CKernel::s_pThis = nullptr;
 
 
-CKernel::CKernel(void) :
+CKernel::CKernel() :
         m_Timer(&m_Interrupt),
         m_Logger(LogDebug, &m_Timer),
         m_USBHCI(&m_Interrupt, &m_Timer),
         m_ucModifiers(0),
         m_rawKeys({0, 0, 0, 0, 0, 0}),
-        m_pGamePad(0),
+        m_pGamePad(nullptr),
         m_ShutdownMode(ShutdownNone) {
 
     s_pThis = this;
@@ -61,14 +61,14 @@ CKernel::CKernel(void) :
 }
 
 
-CKernel::~CKernel(void) {
+CKernel::~CKernel() {
 
     delete bcmFrameBuffer;
-    s_pThis = 0;
+    s_pThis = nullptr;
 }
 
 
-bool CKernel::Initialize(void) {
+bool CKernel::Initialize() {
 
     bool bOK = m_Serial.Initialize(115200);
 
@@ -77,12 +77,12 @@ bool CKernel::Initialize(void) {
     }
 
     // Banner generated using this URL: http://patorjk.com/software/taag/#p=display&f=Standard&t=ZX%20Raspberry%0A
-    m_Logger.Write(FromKernel, LogNotice, "  _______  __  ____                 _                          ");
-    m_Logger.Write(FromKernel, LogNotice, " |__  /\\ \\/ / |  _ \\ __ _ ___ _ __ | |__   ___ _ __ _ __ _   _ ");
-    m_Logger.Write(FromKernel, LogNotice, "   / /  \\  /  | |_) / _` / __| '_ \\| '_ \\ / _ \\ '__| '__| | | |");
-    m_Logger.Write(FromKernel, LogNotice, "  / /_  /  \\  |  _ < (_| \\__ \\ |_) | |_) |  __/ |  | |  | |_| |");
-    m_Logger.Write(FromKernel, LogNotice, " /____|/_/\\_\\ |_| \\_\\__,_|___/ .__/|_.__/ \\___|_|  |_|   \\__, |");
-    m_Logger.Write(FromKernel, LogNotice, "                             |_|                         |___/ ");
+    m_Logger.Write(FromKernel, LogNotice, R"(  _______  __  ____                 _                          )");
+    m_Logger.Write(FromKernel, LogNotice, R"( |__  /\ \/ / |  _ \ __ _ ___ _ __ | |__   ___ _ __ _ __ _   _ )");
+    m_Logger.Write(FromKernel, LogNotice, R"(   / /  \  /  | |_) / _` / __| '_ \| '_ \ / _ \ '__| '__| | | |)");
+    m_Logger.Write(FromKernel, LogNotice, R"(  / /_  /  \  |  _ < (_| \__ \ |_) | |_) |  __/ |  | |  | |_| |)");
+    m_Logger.Write(FromKernel, LogNotice, R"( /____|/_/\_\ |_| \_\__,_|___/ .__/|_.__/ \___|_|  |_|   \__, |)");
+    m_Logger.Write(FromKernel, LogNotice, R"(                             |_|                         |___/ )");
     m_Logger.Write(FromKernel, LogNotice, " ");
     m_Logger.Write(FromKernel, LogNotice, "ZX Raspberry: a bare metal Sinclair ZX Spectrum emulator for Raspberry Pi");
     m_Logger.Write(FromKernel, LogNotice, "Copyright (c) 2020-2023 Jose Hernandez");
@@ -130,115 +130,115 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
     return us;
 }
 
+// NOTE: THIS SECTION OF CODE HAS BEEN TAKEN FROM JSPECCY
+///*
+// * Cada línea completa de imagen dura 224 T-Estados, divididos en:
+// * 128 T-Estados en los que se dibujan los 256 pixeles de pantalla
+// * 24 T-Estados en los que se dibujan los 48 pixeles del borde derecho
+// * 48 T-Estados iniciales de H-Sync y blanking
+// * 24 T-Estados en los que se dibujan 48 pixeles del borde izquierdo
+// *
+// * Cada pantalla consta de 312 líneas divididas en:
+// * 16 líneas en las cuales el haz vuelve a la parte superior de la pantalla
+// * 48 líneas de borde superior
+// * 192 líneas de pantalla
+// * 56 líneas de borde inferior de las cuales se ven solo 48
+// */
+//int CKernel::tStatesToScreenPixel48k(int tstates) {
+//    tstates %= spectrumModel->tStatesPerScreenFrame();
+//    int row = tstates / spectrumModel->tStatesPerScreenLine();
+//    int col = tstates % spectrumModel->tStatesPerScreenLine();
+//
+//    // Quitamos las líneas que no se ven por arriba y por abajo
+//    if (row < (64 - TOP_BORDER - 1) || row > (256 + BOTTOM_BORDER - 1)) {
+//        return 0xf0cab0ba;
+//    }
+//
+//    // Caso especial de la primera línea
+//    if (row == (64 - TOP_BORDER - 1) && col < 200 + (24 - LEFT_BORDER / 2)) {
+//        return 0xf0cab0ba;
+//    }
+//
+//    // Caso especial de la última línea
+//    if (row == (256 + BOTTOM_BORDER - 1) && col > (127 + RIGHT_BORDER / 2)) {
+//        return 0xf0cab0ba;
+//    }
+//
+//    // Quitamos la parte del borde derecho que no se ve, la zona de H-Sync
+//    // y la parte izquierda del borde que tampoco se ve
+//    if (col > (127 + RIGHT_BORDER / 2) && col < 200 + (24 - LEFT_BORDER / 2)) {
+//        return 0xf0cab0ba;
+//    }
+//
+//    // Quitamos la parte correspondiente a SCREEN$
+//    if (row > 63 && row < 256 && col < 128) {
+//        return 0xf0cab0ba;
+//    }
+//
+//    // 176 t-estados de línea es en medio de la zona de retrazo
+//    if (col > 176) {
+//        row++;
+//        col -= 200 + (24 - LEFT_BORDER / 2);
+//    } else {
+//        col += RIGHT_BORDER / 2 - (RIGHT_BORDER - LEFT_BORDER) / 2;
+//    }
+//
+//    row -= (64 - TOP_BORDER);
+//
+//    return row * SCREEN_WIDTH + col * 2;
+//}
+//
+//
+//void CKernel::buildScreenTables48k() {
+//    uint8_t col;
+//    int scan;
+//
+//    firstBorderUpdate = ((64 - TOP_BORDER) * spectrumModel->tStatesPerScreenLine()) - LEFT_BORDER / 2;
+//    lastBorderUpdate = (255 + BOTTOM_BORDER) * spectrumModel->tStatesPerScreenLine() + 128 + RIGHT_BORDER;
+//    m_Logger.Write(FromKernel, LogNotice, "First border update: %d", firstBorderUpdate);
+//    m_Logger.Write(FromKernel, LogNotice, "Last border update: %d", lastBorderUpdate);
+//
+//    std::fill(states2scr, states2scr + spectrumModel->tStatesPerScreenFrame() + 100, 0);
+//
+//    step = 0;
+//    for (int tstates = spectrumModel->tStatesToFirstScreenByte(); tstates < 57248; tstates += 4) {
+//        col = (tstates % spectrumModel->tStatesPerScreenLine()) / 4;
+//
+//        if (col > 31) {
+//            continue;
+//        }
+//        scan = tstates / spectrumModel->tStatesPerScreenLine() - spectrumModel->upBorderHeight();
+//        states2scr[tstates + 2] = scrAddr[scan] + col;
+//        stepStates[step++] = tstates + 2;
+//    }
+//
+//    std::fill(states2border, states2border + spectrumModel->tStatesPerScreenFrame() + 100, 0xF0CAB0BA);
+//
+//    for (uint32_t tstates = firstBorderUpdate; tstates < lastBorderUpdate; tstates += 4) {
+//        states2border[tstates] = tStatesToScreenPixel48k(tstates);
+//        states2border[tstates + 1] = states2border[tstates];
+//        states2border[tstates + 2] = states2border[tstates];
+//        states2border[tstates + 3] = states2border[tstates];
+//    }
+//
+//    std::fill(delayTstates, delayTstates + spectrumModel->tStatesPerScreenFrame() + 200, 0x0);
+//
+//    for (int idx = 14335; idx < 57247; idx += spectrumModel->tStatesPerScreenLine()) {
+//        for (int ndx = 0; ndx < 128; ndx += 8) {
+//            int frame = idx + ndx;
+//            delayTstates[frame++] = 6;
+//            delayTstates[frame++] = 5;
+//            delayTstates[frame++] = 4;
+//            delayTstates[frame++] = 3;
+//            delayTstates[frame++] = 2;
+//            delayTstates[frame++] = 1;
+//            delayTstates[frame++] = 0;
+//            delayTstates[frame++] = 0;
+//        }
+//    }
+//}
 
-/*
- * Cada línea completa de imagen dura 224 T-Estados, divididos en:
- * 128 T-Estados en los que se dibujan los 256 pixeles de pantalla
- * 24 T-Estados en los que se dibujan los 48 pixeles del borde derecho
- * 48 T-Estados iniciales de H-Sync y blanking
- * 24 T-Estados en los que se dibujan 48 pixeles del borde izquierdo
- *
- * Cada pantalla consta de 312 líneas divididas en:
- * 16 líneas en las cuales el haz vuelve a la parte superior de la pantalla
- * 48 líneas de borde superior
- * 192 líneas de pantalla
- * 56 líneas de borde inferior de las cuales se ven solo 48
- */
-int CKernel::tStatesToScreenPixel48k(int tstates) {
-    tstates %= spectrumModel->tStatesPerScreenFrame();
-    int row = tstates / spectrumModel->tStatesPerScreenLine();
-    int col = tstates % spectrumModel->tStatesPerScreenLine();
-
-    // Quitamos las líneas que no se ven por arriba y por abajo
-    if (row < (64 - TOP_BORDER - 1) || row > (256 + BOTTOM_BORDER - 1)) {
-        return 0xf0cab0ba;
-    }
-
-    // Caso especial de la primera línea
-    if (row == (64 - TOP_BORDER - 1) && col < 200 + (24 - LEFT_BORDER / 2)) {
-        return 0xf0cab0ba;
-    }
-
-    // Caso especial de la última línea
-    if (row == (256 + BOTTOM_BORDER - 1) && col > (127 + RIGHT_BORDER / 2)) {
-        return 0xf0cab0ba;
-    }
-
-    // Quitamos la parte del borde derecho que no se ve, la zona de H-Sync
-    // y la parte izquierda del borde que tampoco se ve
-    if (col > (127 + RIGHT_BORDER / 2) && col < 200 + (24 - LEFT_BORDER / 2)) {
-        return 0xf0cab0ba;
-    }
-
-    // Quitamos la parte correspondiente a SCREEN$
-    if (row > 63 && row < 256 && col < 128) {
-        return 0xf0cab0ba;
-    }
-
-    // 176 t-estados de línea es en medio de la zona de retrazo
-    if (col > 176) {
-        row++;
-        col -= 200 + (24 - LEFT_BORDER / 2);
-    } else {
-        col += RIGHT_BORDER / 2 - (RIGHT_BORDER - LEFT_BORDER) / 2;
-    }
-
-    row -= (64 - TOP_BORDER);
-
-    return row * SCREEN_WIDTH + col * 2;
-}
-
-
-void CKernel::buildScreenTables48k() {
-    uint8_t col;
-    int scan;
-
-    firstBorderUpdate = ((64 - TOP_BORDER) * spectrumModel->tStatesPerScreenLine()) - LEFT_BORDER / 2;
-    lastBorderUpdate = (255 + BOTTOM_BORDER) * spectrumModel->tStatesPerScreenLine() + 128 + RIGHT_BORDER;
-    m_Logger.Write(FromKernel, LogNotice, "First border update: %d", firstBorderUpdate);
-    m_Logger.Write(FromKernel, LogNotice, "Last border update: %d", lastBorderUpdate);
-
-    std::fill(states2scr, states2scr + spectrumModel->tStatesPerScreenFrame() + 100, 0);
-
-    step = 0;
-    for (int tstates = spectrumModel->tStatesToFirstScreenByte(); tstates < 57248; tstates += 4) {
-        col = (tstates % spectrumModel->tStatesPerScreenLine()) / 4;
-
-        if (col > 31) {
-            continue;
-        }
-        scan = tstates / spectrumModel->tStatesPerScreenLine() - spectrumModel->upBorderHeight();
-        states2scr[tstates + 2] = scrAddr[scan] + col;
-        stepStates[step++] = tstates + 2;
-    }
-
-    std::fill(states2border, states2border + spectrumModel->tStatesPerScreenFrame() + 100, 0xF0CAB0BA);
-
-    for (uint32_t tstates = firstBorderUpdate; tstates < lastBorderUpdate; tstates += 4) {
-        states2border[tstates] = tStatesToScreenPixel48k(tstates);
-        states2border[tstates + 1] = states2border[tstates];
-        states2border[tstates + 2] = states2border[tstates];
-        states2border[tstates + 3] = states2border[tstates];
-    }
-
-    std::fill(delayTstates, delayTstates + spectrumModel->tStatesPerScreenFrame() + 200, 0x0);
-
-    for (int idx = 14335; idx < 57247; idx += spectrumModel->tStatesPerScreenLine()) {
-        for (int ndx = 0; ndx < 128; ndx += 8) {
-            int frame = idx + ndx;
-            delayTstates[frame++] = 6;
-            delayTstates[frame++] = 5;
-            delayTstates[frame++] = 4;
-            delayTstates[frame++] = 3;
-            delayTstates[frame++] = 2;
-            delayTstates[frame++] = 1;
-            delayTstates[frame++] = 0;
-            delayTstates[frame++] = 0;
-        }
-    }
-}
-
-TShutdownMode CKernel::Run(void) {
+[[noreturn]] TShutdownMode CKernel::Run() {
 
     /*
      * Configure push button 3 on the Maker pHAT board to work in pull up input model as described in the
@@ -445,22 +445,22 @@ TShutdownMode CKernel::Run(void) {
 
 void CKernel::KeyPressedHandler(const char *pString) {
 
-    assert (s_pThis != 0);
+    assert (s_pThis != nullptr);
     s_pThis->m_Logger.Write(FromKernel, LogError, "%c", *pString);
 //    s_pThis->m_Screen.Write (pString, strlen (pString));
 }
 
 
-void CKernel::ShutdownHandler(void) {
+void CKernel::ShutdownHandler() {
 
-    assert (s_pThis != 0);
+    assert (s_pThis != nullptr);
     s_pThis->m_ShutdownMode = ShutdownReboot;
 }
 
 
 void CKernel::KeyStatusHandlerRaw(unsigned char ucModifiers, const unsigned char RawKeys[6]) {
 
-    assert (s_pThis != 0);
+    assert (s_pThis != nullptr);
     s_pThis->m_ucModifiers = ucModifiers;
     memcpy(&s_pThis->m_rawKeys, RawKeys, 6 * sizeof(unsigned char));
 }
@@ -473,7 +473,7 @@ void CKernel::gamePadStatusHandler(unsigned nDeviceIndex, const TGamePadState *p
         return;
     }
 
-    assert (s_pThis != 0);
-    assert (pState != 0);
+    assert (s_pThis != nullptr);
+    assert (pState != nullptr);
     memcpy(&s_pThis->m_GamePadState, pState, sizeof *pState);
 }
