@@ -82,7 +82,7 @@ private:
     int m_nPosY{};
 
     ZxDisplay m_zxDisplay;
-    CBcmFrameBuffer *bcmFrameBuffer{};
+    CBcmFrameBuffer *m_pFrameBuffer{};
     Z80emu *z80emu{};
 
     TShutdownMode m_ShutdownMode = ShutdownNone;

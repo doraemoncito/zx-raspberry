@@ -63,7 +63,7 @@ CKernel::CKernel() :
 
 CKernel::~CKernel() {
 
-    delete bcmFrameBuffer;
+    delete m_pFrameBuffer;
     s_pThis = nullptr;
 }
 
@@ -109,9 +109,16 @@ bool CKernel::Initialize() {
          * Our framebuffer uses a 4 bit palette to represent 16 colours that can be displayed on a ZX Spectrum at
          * anyone time.
          */
-        bcmFrameBuffer = new CBcmFrameBuffer(SCREEN_WIDTH, SCREEN_HEIGHT, 4);
+        m_pFrameBuffer = new CBcmFrameBuffer(
+                SCREEN_WIDTH, SCREEN_HEIGHT, 4,
+                SCREEN_WIDTH, SCREEN_HEIGHT * 2, 0,
+                true);
+        bOK = (m_pFrameBuffer != nullptr) && m_pFrameBuffer->Initialize();
+    }
+
+    if (bOK) {
         z80emu = new Z80emu();
-        bOK = m_zxDisplay.Initialize(z80emu->getRam() + 0x4000, bcmFrameBuffer);
+        bOK = m_zxDisplay.Initialize(z80emu->getRam() + 0x4000, m_pFrameBuffer);
     }
 
     return bOK;
@@ -323,7 +330,7 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
     unsigned int frameCounter = 0;
     step = 0;
 
-    std::unique_ptr<ZxUla> zxUla(new ZxUla(*z80emu, *bcmFrameBuffer));
+    std::unique_ptr<ZxUla> zxUla(new ZxUla(*z80emu, *m_pFrameBuffer));
 
     uint32_t nextEvent = stepStates[0];
 
@@ -419,8 +426,8 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
             auto zxLabel1 = ZxLabel(ZxRect(2, 30, 1, 1), "Keyboard not found!");
             auto zxLabel2 = ZxLabel(ZxRect(2, 31, 1, 1), "Please connect keyboard to continue.");
 
-            zxLabel1.draw(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()));
-            zxLabel2.draw(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()));
+            zxLabel1.draw(reinterpret_cast<uint8_t *>(m_pFrameBuffer->GetBuffer()));
+            zxLabel2.draw(reinterpret_cast<uint8_t *>(m_pFrameBuffer->GetBuffer()));
         }
 
         unsigned endClockTicks = m_Timer.GetClockTicks();

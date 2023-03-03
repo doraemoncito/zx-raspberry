@@ -59,12 +59,12 @@ boolean CKernel::Initialize() {
 	}
 
     // Banner generated using this URL: http://patorjk.com/software/taag/#p=display&f=Standard&t=ZX%20GUI%0A
-    m_Logger.Write(FromKernel, LogNotice,R"(  _______  __   ____ _   _ ___  )");
-    m_Logger.Write(FromKernel, LogNotice,R"( |__  /\ \/ /  / ___| | | |_ _| )");
-    m_Logger.Write(FromKernel, LogNotice,R"(   / /  \  /  | |  _| | | || |  )");
-    m_Logger.Write(FromKernel, LogNotice,R"(  / /_  /  \  | |_| | |_| || |  )");
-    m_Logger.Write(FromKernel, LogNotice,R"( /____|/_/\_\  \____|\___/|___| )");
-    m_Logger.Write(FromKernel, LogNotice,R"(                                )");
+    m_Logger.Write(FromKernel, LogNotice, R"(  _______  __   ____ _   _ ___  )");
+    m_Logger.Write(FromKernel, LogNotice, R"( |__  /\ \/ /  / ___| | | |_ _| )");
+    m_Logger.Write(FromKernel, LogNotice, R"(   / /  \  /  | |  _| | | || |  )");
+    m_Logger.Write(FromKernel, LogNotice, R"(  / /_  /  \  | |_| | |_| || |  )");
+    m_Logger.Write(FromKernel, LogNotice, R"( /____|/_/\_\  \____|\___/|___| )");
+    m_Logger.Write(FromKernel, LogNotice, R"(                                )");
     m_Logger.Write(FromKernel, LogNotice, " ");
     m_Logger.Write(FromKernel, LogNotice, "ZX Screen: a bare metal GUI test application");
     m_Logger.Write(FromKernel, LogNotice, "Copyright (c) 2020-2023 Jose Hernandez");
@@ -87,8 +87,8 @@ boolean CKernel::Initialize() {
 
 	if (bOK)
 	{
-		m_pBcmFrameBuffer = new CBcmFrameBuffer(352, 272, 4);
-		bOK = m_zxDisplay.Initialize(ViajeAlCentroDeLaTierra_scr, m_pBcmFrameBuffer);
+        m_pFrameBuffer = new CBcmFrameBuffer(352, 272, 4);
+		bOK = m_zxDisplay.Initialize(ViajeAlCentroDeLaTierra_scr, m_pFrameBuffer);
 	}
 
     m_Logger.Write(FromKernel, LogError, (bOK) ? "Initialisation completed successfully" : "Initialisation failed");
@@ -98,7 +98,7 @@ boolean CKernel::Initialize() {
 
 [[noreturn]] TShutdownMode CKernel::Run() {
 
-    m_Logger.Write (FromKernel, LogNotice, "Please attach an USB keyboard, if not already done!");
+    m_Logger.Write (FromKernel, LogNotice, "Please attach a USB keyboard, if not already done!");
 
 //    CUSBKeyboardDevice *pKeyboard = (CUSBKeyboardDevice *) CDeviceNameService::Get()->GetDevice("ukbd1", FALSE);
 ////    CUSBKeyboardDevice *pKeyboard = (CUSBKeyboardDevice *) m_DeviceNameService.GetDevice("ukbd1", FALSE);
@@ -110,9 +110,9 @@ boolean CKernel::Initialize() {
 //    }
 
 
-//    while (TRUE) {
+    while (TRUE) {
 
-        for (unsigned nCount = 0; m_ShutdownMode == ShutdownNone; nCount++) {
+//        for (unsigned nCount = 0; m_ShutdownMode == ShutdownNone; nCount++) {
             // This must be called from TASK_LEVEL to update the tree of connected USB devices.
             boolean bUpdated = m_USBHCI.UpdatePlugAndPlay();
 
@@ -142,7 +142,7 @@ boolean CKernel::Initialize() {
         m_zxDisplay.update(FALSE);
 
             if (m_showDialog) {
-                auto zxDialog = ZxDialog(ZxRect(2, 12, 40, 10), "About ZX Raspberry");
+                auto zxDialog = ZxDialog(ZxRect(2, 12, 40, 10), "About ZX GUI");
 
                 /*
                  * The default printable characters (32 (space) to 127 (copyright)) are stored at the end of the Spectrum's ROM at
@@ -158,11 +158,11 @@ boolean CKernel::Initialize() {
                  *
                  * Reference: https://enacademic.com/dic.nsf/enwiki/513468
                  */
-                zxDialog.insert(new ZxLabel(ZxRect(1, 2, 1, 1), "ZX Raspberry version 0.0.1"));
+                zxDialog.insert(new ZxLabel(ZxRect(1, 2, 1, 1), "ZX GUI version 0.0.1"));
                 zxDialog.insert(new ZxLabel(ZxRect(1, 3, 1, 1), "Copyright \x7F 2020-2023 Jose Hernandez"));
                 zxDialog.insert(new ZxLabel(ZxRect(1, 6, 1, 1), "Build date: " __DATE__ " " __TIME__));
 
-                zxDialog.draw(reinterpret_cast<uint8_t *>(m_pBcmFrameBuffer->GetBuffer()));
+                zxDialog.draw(reinterpret_cast<uint8_t *>(m_pFrameBuffer->GetBuffer()));
             }
 
             m_ActLED.Off();
@@ -172,7 +172,7 @@ boolean CKernel::Initialize() {
         m_zxDisplay.update(TRUE);
 
             if (m_showDialog) {
-                auto zxDialog = ZxDialog(ZxRect(2, 12, 40, 10), "About ZX Raspberry");
+                auto zxDialog = ZxDialog(ZxRect(2, 12, 40, 10), "About ZX GUI");
 
                 /*
                  * The default printable characters (32 (space) to 127 (copyright)) are stored at the end of the Spectrum's ROM at
@@ -188,11 +188,11 @@ boolean CKernel::Initialize() {
                  *
                  * Reference: https://enacademic.com/dic.nsf/enwiki/513468
                  */
-                zxDialog.insert(new ZxLabel(ZxRect(1, 2, 1, 1), "ZX Raspberry version 0.0.1"));
+                zxDialog.insert(new ZxLabel(ZxRect(1, 2, 1, 1), "ZX GUI version 0.0.1"));
                 zxDialog.insert(new ZxLabel(ZxRect(1, 3, 1, 1), "Copyright \x7F 2020-2023 Jose Hernandez"));
                 zxDialog.insert(new ZxLabel(ZxRect(1, 6, 1, 1), "Build date: " __DATE__ " " __TIME__));
 
-                zxDialog.draw(reinterpret_cast<uint8_t *>(m_pBcmFrameBuffer->GetBuffer()));
+                zxDialog.draw(reinterpret_cast<uint8_t *>(m_pFrameBuffer->GetBuffer()));
             }
 
             m_ActLED.On();

@@ -73,7 +73,7 @@ private:
 
     static CKernel *s_pThis;
 
-    CBcmFrameBuffer *m_pBcmFrameBuffer{};
+    CBcmFrameBuffer *m_pFrameBuffer{};
     ZxDisplay m_zxDisplay;
     boolean m_showDialog;
 
