@@ -93,8 +93,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
             raspi
     )
 
-    set(LOAD_ADDR 0x0000)
-    set(ENTRY_POINT 0x8000)
+    set(LOAD_ADDR 0x00008000)
+    set(ENTRY_POINT 0x00008000)
 
     # https://gcc.gnu.org/onlinedocs/gcc/Link-Options.html
     # After printing the whole g++ command like by invoking it with the "-v" argument we can see that g++
@@ -147,12 +147,12 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
 
     # U-Boot requires us to wrap the ELF executable (not the binary image) in a special U-Boot image file
     # so that it can be sent over to U-Boot via TFTP.
-    # IMPORTANT: 32 bit kernels in Das U-Boot are loaded at address 0x0000 and started at address 0x8000.
+    # IMPORTANT: 32 bit kernels in Das U-Boot are loaded at address 0x00008000 and started at address 0x00008000.
     add_custom_command(
             TARGET ${PROJECT_NAME}
             # Run after the kernel has been built
             POST_BUILD
-            COMMAND mkimage -n "screentext" -A arm -O linux -T kernel -C none -a 0x0000 -e 0x8000 -d ${PROJECT_NAME} /tmp/boot.scr.uimg && mv /tmp/boot.scr.uimg .
+            COMMAND mkimage -n "screentext" -A arm -O linux -T kernel -C none -a ${LOAD_ADDR} -e ${ENTRY_POINT} -d ${PROJECT_NAME} /tmp/boot.scr.uimg && mv /tmp/boot.scr.uimg .
             COMMENT "  U-Boot boot.scr.uimg"
             VERBATIM
     )

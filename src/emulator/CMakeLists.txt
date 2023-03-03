@@ -166,8 +166,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
     )
 
     set(KERNEL_IMG kernel7l.img)
-    # WARNING: the emulator will simply lockup before its gets started unless the load address is 0x0
-    set(LOAD_ADDR 0x00000000)
+    # WARNING: the emulator will simply lockup before its gets started unless the load address is 0x00008000 so as not
+    # to overwrite other files loaded by the Raspberry Pi boot-up firmware.
+    set(LOAD_ADDR 0x00008000)
     set(ENTRY_POINT 0x00008000)
 
     # google search "cmake target_objects example"
@@ -180,7 +181,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
 #    )
 
     set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> -Wl,-Map=${TARGET}.map ${LDFLAGS} -T ${CIRCLEHOME}/circle.ld ${CRTBEGIN} <OBJECTS> -nostdlib -Wl,--start-group <LINK_LIBRARIES> -Wl,--end-group ${CRTEND} -o <TARGET>")
-    set(ENTRY_POINT 0x00008000)
 
     # https://gcc.gnu.org/onlinedocs/gcc/Link-Options.html
     # After printing the whole g++ command like by invoking it with the "-v" argument we can see that g++
