@@ -40,7 +40,7 @@ enum TShutdownMode {
 };
 
 class CBcmFrameBuffer;
-
+class ZxDialog;
 
 class CKernel {
 public:
@@ -75,11 +75,14 @@ private:
 
     CBcmFrameBuffer *m_pFrameBuffer{};
     ZxDisplay m_zxDisplay;
+    ZxDialog *m_pAboutDialog;
     boolean m_showDialog;
 
     // Keyboard support
     unsigned char m_ucModifiers{};
     unsigned char m_rawKeys[6]{};
+
+    void handleAboutDialog();
 
 };
 

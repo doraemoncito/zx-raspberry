@@ -19,7 +19,15 @@
 #include "zxgroup.h"
 
 
-ZxGroup::ZxGroup(ZxRect const &bounds) : ZxView(bounds), numChildren(0) {
+ZxGroup::ZxGroup(ZxRect const bounds) : ZxView(bounds), numChildren(0) {
+}
+
+
+ZxGroup::~ZxGroup() {
+
+    for (int childrenIdx = 0; childrenIdx < numChildren; childrenIdx++) {
+        delete children[childrenIdx];
+    }
 }
 
 

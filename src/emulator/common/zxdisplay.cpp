@@ -23,14 +23,20 @@
 #include <circle/bcmframebuffer.h>
 #include <circle/util.h>
 #include "zxdisplay.h"
+#include "gui/zxview.h"
 
 
 ZxDisplay::ZxDisplay()
-        : m_pFrameBuffer(nullptr),
-          m_pBuffer(nullptr),
+        : m_pZxView(nullptr),
+          m_pFrameBuffer(nullptr),
           m_pVideoMem(nullptr),
           m_border(0xFu),
-          m_borderChanged(false) {
+          m_bBorderChanged(false),
+          m_bDoubleBufferingEnabled(true),
+          m_bVSync(false),
+          m_bBufferSwapped(false),
+          m_pBaseBuffer(nullptr),
+          m_pBuffer(nullptr) {
 }
 
 
@@ -42,8 +48,9 @@ ZxDisplay::~ZxDisplay() {
     delete[] m_pScrTable;
 
     m_pVideoMem = nullptr;
-    m_pBuffer = nullptr;
     m_pFrameBuffer = nullptr;
+    m_pBaseBuffer = nullptr;
+    m_pBuffer = nullptr;
 }
 
 
@@ -81,10 +88,10 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
         return false;
     }
 
-    m_pBuffer = reinterpret_cast<uint32_t *>(m_pFrameBuffer->GetBuffer());
-    assert(m_pBuffer != nullptr);
+    m_pBaseBuffer = reinterpret_cast<uint8_t *>(m_pFrameBuffer->GetBuffer());
+    m_pBuffer = m_pBaseBuffer + SCREEN_WIDTH * (SCREEN_HEIGHT / 2);
 
-    std::memset(m_pBuffer, ((m_border << 0x4u) | m_border), m_pFrameBuffer->GetSize());
+    std::memset(m_pBaseBuffer, ((m_border << 0x4u) | m_border), m_pFrameBuffer->GetSize());
 
     /*
      * Create a lookup table for draw the screen Faster Than Light :)
@@ -128,8 +135,28 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
 
 void ZxDisplay::update(bool flash) {
 
+    assert(m_pBaseBuffer != nullptr);
     assert(m_pBuffer != nullptr);
     assert(m_pVideoMem != nullptr);
+
+    if (m_bDoubleBufferingEnabled) {
+        if (m_bVSync) {
+            // In VSync mode we swap the target frame each we refresh the screen
+            m_pFrameBuffer->SetVirtualOffset(0, m_bBufferSwapped ? SCREEN_HEIGHT : 0);
+            m_pFrameBuffer->WaitForVerticalSync();
+            m_bBufferSwapped = !m_bBufferSwapped;
+        } else {
+            // In non-vsync mode we just copy from the hidden buffer to the base buffer
+            memcpy(m_pBaseBuffer, m_pBuffer, (SCREEN_WIDTH * SCREEN_HEIGHT) / 2 /* 2 pixels per byte */);
+        }
+    }
+
+    /*
+     * Determine the location of the next target buffer.  If double buffering is not enabled, the next target buffer
+     * will always be the base buffer.
+     */
+    auto pTargetBuffer8 = (m_bDoubleBufferingEnabled && m_bBufferSwapped) ? m_pBaseBuffer : m_pBuffer;
+    auto pTargetBuffer32 = reinterpret_cast<uint32_t *>(pTargetBuffer8);
 
     /*
      * Calculate the index into the frame buffer to perform fast translation of ZX Spectrum video memory to Raspberry Pi
@@ -145,10 +172,12 @@ void ZxDisplay::update(bool flash) {
 
     static uint8_t flashMask[] = {0x7Fu, 0xFFu};
 
-    // TODO: eliminate branching to allow this code to run efficiently on the Raspberry Pi's GPU
-    if (m_borderChanged) {
-        std::memset(m_pBuffer, ((m_border << 0x4u) | m_border), m_pFrameBuffer->GetSize());
-        m_borderChanged = false;
+    m_bBorderChanged = true;
+
+    // Draw the border
+    if (m_bBorderChanged) {
+        std::memset(pTargetBuffer8, ((m_border << 0x4u) | m_border), (SCREEN_WIDTH * SCREEN_HEIGHT) / 2 /* 2 pixels per byte */);
+        m_bBorderChanged = false;
     }
 
     // The ZX Spectrum screen is made up of 3 blocks of 2048 (0x0800) bytes each
@@ -156,17 +185,21 @@ void ZxDisplay::update(bool flash) {
         for (unsigned int row = 0x0000; row < 0x0100; row += 0x0020) {
             for (unsigned int column = 0x0000; column < 0x0020; column++) {
                 uint8_t colour = m_pVideoMem[attribute++] & flashMask[flash];
-                m_pBuffer[bufIdx + column + 0x0000] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0000]];
-                m_pBuffer[bufIdx + column + 0x002C] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0100]];
-                m_pBuffer[bufIdx + column + 0x0058] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0200]];
-                m_pBuffer[bufIdx + column + 0x0084] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0300]];
-                m_pBuffer[bufIdx + column + 0x00B0] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0400]];
-                m_pBuffer[bufIdx + column + 0x00DC] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0500]];
-                m_pBuffer[bufIdx + column + 0x0108] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0600]];
-                m_pBuffer[bufIdx + column + 0x0134] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0700]];
+                pTargetBuffer32[bufIdx + column + 0x0000] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0000]];
+                pTargetBuffer32[bufIdx + column + 0x002C] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0100]];
+                pTargetBuffer32[bufIdx + column + 0x0058] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0200]];
+                pTargetBuffer32[bufIdx + column + 0x0084] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0300]];
+                pTargetBuffer32[bufIdx + column + 0x00B0] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0400]];
+                pTargetBuffer32[bufIdx + column + 0x00DC] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0500]];
+                pTargetBuffer32[bufIdx + column + 0x0108] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0600]];
+                pTargetBuffer32[bufIdx + column + 0x0134] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0700]];
             }
             bufIdx += 0x0160;
         }
+    }
+
+    if (m_pZxView != nullptr) {
+        m_pZxView->draw(pTargetBuffer8);
     }
 }
 
@@ -174,7 +207,13 @@ void ZxDisplay::update(bool flash) {
 void ZxDisplay::setBorder(uint8_t border) {
 
     if (this->m_border != border) {
-        this->m_borderChanged = true;
+        this->m_bBorderChanged = true;
         this->m_border = border;
     }
+}
+
+
+void ZxDisplay::setUI(ZxView *pZxView) {
+
+    this->m_pZxView = pZxView;
 }

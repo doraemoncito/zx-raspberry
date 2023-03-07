@@ -32,28 +32,31 @@ private:
     unsigned nDepth = 0;
     unsigned nVirtualWidth = 0;
     unsigned nVirtualHeight = 0;
-
+    unsigned nDisplay = 0;
+    bool bDoubleBuffered = false;
     uint8_t *buffer = nullptr;
 
 public:
 
     uint32_t palette[256] = {0};
 
-
-    CBcmFrameBuffer(unsigned nWidth, unsigned nHeight, unsigned nDepth, unsigned nVirtualWidth = 0, unsigned nVirtualHeight = 0) {
-
+    CBcmFrameBuffer(unsigned nWidth, unsigned nHeight, unsigned nDepth,
+                    unsigned nVirtualWidth = 0, unsigned nVirtualHeight = 0,
+                    unsigned nDisplay = 0, boolean bDoubleBuffered = FALSE) {
         this->nWidth = nWidth;
         this->nHeight = nHeight;
         this->nDepth = nDepth;
         this->nVirtualWidth = nVirtualWidth;
         this->nVirtualHeight = nVirtualHeight;
+        this->nDisplay = nDisplay;
+        this->bDoubleBuffered = bDoubleBuffered;
 
         // TODO: change data type according to the colour depth (min 8 bits)
         buffer = new uint8_t[nWidth * nHeight];
     };
 
 
-    ~CBcmFrameBuffer(void) {};
+    ~CBcmFrameBuffer() = default;
 
 
     void SetPalette(u8 nIndex, u16 nRGB565) {
@@ -106,6 +109,12 @@ public:
 
         return nWidth * nHeight;
     };
+
+    void SetVirtualOffset(int, int) {
+    }
+
+    void WaitForVerticalSync() {
+    }
 
 };
 

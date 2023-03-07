@@ -48,7 +48,7 @@ CKernel *CKernel::s_pThis = nullptr;
 
 CKernel::CKernel() :
         m_Timer(&m_Interrupt),
-        m_Logger(LogDebug, &m_Timer),
+        m_Logger(m_Options.GetLogLevel(), &m_Timer),
         m_USBHCI(&m_Interrupt, &m_Timer),
         m_ucModifiers(0),
         m_rawKeys({0, 0, 0, 0, 0, 0}),
@@ -110,10 +110,10 @@ bool CKernel::Initialize() {
          * anyone time.
          */
         m_pFrameBuffer = new CBcmFrameBuffer(
-                SCREEN_WIDTH, SCREEN_HEIGHT, 4,
-                SCREEN_WIDTH, SCREEN_HEIGHT * 2, 0,
+                ZxDisplay::SCREEN_WIDTH, ZxDisplay::SCREEN_HEIGHT, ZxDisplay::COLOUR_DEPTH,
+                ZxDisplay::SCREEN_WIDTH, ZxDisplay::SCREEN_HEIGHT * 2, 0,
                 true);
-        bOK = (m_pFrameBuffer != nullptr) && m_pFrameBuffer->Initialize();
+        bOK = (m_pFrameBuffer != nullptr);
     }
 
     if (bOK) {
@@ -339,9 +339,9 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
 #endif // DEBUG
 
     while (ShutdownNone == m_ShutdownMode) {
-#ifdef DEBUG
-        m_Logger.Write(FromKernel, LogNotice, "Running CPU instructions");
-#endif // DEBUG
+//#ifdef DEBUG
+//        m_Logger.Write(FromKernel, LogNotice, "Running CPU instructions");
+//#endif // DEBUG
 
         /* Flash the Raspberry Pi LED on and off following the ZX Spectrum attribute flash cycle. This will give a
          * visual cue that the emulator is actually running.
@@ -411,15 +411,15 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
             flash = !flash;
         }
 
-#ifdef DEBUG
-        m_Logger.Write(FromKernel, LogNotice, "Setting the screen border");
-#endif // DEBUG
+//#ifdef DEBUG
+//        m_Logger.Write(FromKernel, LogNotice, "Setting the screen border");
+//#endif // DEBUG
 
         m_zxDisplay.setBorder(z80emu->getBorder());
 
-#ifdef DEBUG
-        m_Logger.Write(FromKernel, LogNotice, "Refreshing video framebuffer");
-#endif // DEBUG
+//#ifdef DEBUG
+//        m_Logger.Write(FromKernel, LogNotice, "Refreshing video framebuffer");
+//#endif // DEBUG
 
         m_zxDisplay.update(flash);
         if (pKeyboard == nullptr) {

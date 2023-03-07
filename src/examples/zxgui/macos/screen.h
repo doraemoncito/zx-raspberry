@@ -8,6 +8,7 @@
 #include "common/zxdisplay.h"
 
 class CBcmFrameBuffer;
+class ZxDialog;
 
 class Screen : public QWidget
 {
@@ -39,6 +40,7 @@ private:
     QImage raspberryPiImage = QImage(352, 272, QImage::Format_RGB32);
 
     CBcmFrameBuffer *bcmFrameBuffer = nullptr;
+    ZxDialog *m_pAboutDialog;
 };
 
 

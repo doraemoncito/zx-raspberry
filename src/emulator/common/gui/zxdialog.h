@@ -13,7 +13,7 @@ class ZxDialog : public ZxGroup {
     typedef ZxGroup super;
 
 public:
-    ZxDialog(ZxRect const &bounds, const char *title);
+    ZxDialog(ZxRect bounds, const char *title);
 
     void drawFrame(uint8_t *buffer, unsigned int x, unsigned int y, unsigned int width, unsigned int height);
     void draw(uint8_t *buffer) override;

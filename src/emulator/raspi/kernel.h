@@ -58,7 +58,6 @@ public:
 private:
 
     // do not change this order
-//    CMemorySystem *m_Memory;
     CActLED m_ActLED;
     CKernelOptions m_Options;
     CDeviceNameService m_DeviceNameService;
@@ -101,29 +100,6 @@ private:
 
     ZxHardwareModel *spectrumModel{};
 
-    /* TODO: MOVE THESE CONSTANTS TO A SHARED MULTI-PLATFORM LOCATION.
-     *
-     * These are the visible screen dimensions, which are smaller than the actual dimensions suggested by the
-     * screen timings since it takes the electron beam some time to fly back to the beginning or top of the screen:
-     *
-     * WIDTH:  48 pixel border + 256 pixel screen + 48 pixel border = 352 pixels = 44 characters
-     * HEIGHT: 48 pixel border + 192 pixel screen + 56 pixel border = 296 pixels = 37 characters
-
-     * Follow these links for more information on the screen layout and timings:
-     *
-     * - <http://www.zxdesign.info/vidresearch.shtml>
-     * - <http://www.zxdesign.info/vidparam.shtml>
-     * - <http://www.breakintoprogram.co.uk/computers/zx-spectrum/screen-memory-layout>
-     */
-    const int LEFT_BORDER = 48;
-    const int RIGHT_BORDER = 48;
-    const int CANVAS_WIDTH = 256;
-    const int SCREEN_WIDTH = LEFT_BORDER + CANVAS_WIDTH + RIGHT_BORDER;
-    const int TOP_BORDER = 48;
-    const int BOTTOM_BORDER = 56;
-    const int CANVAS_HEIGHT = 192;
-    const int SCREEN_HEIGHT = TOP_BORDER + CANVAS_HEIGHT + BOTTOM_BORDER;
-
     /* The Spectrum screen memory map is split into two sections:
      * - 6144 bytes (0x1800) worth of bitmap data, starting at memory address 0x4000
      * - 768 bytes (0x0300) of colour attribute data, immediately after the bitmap data at address 0x5800
@@ -136,7 +112,7 @@ private:
 
     // Tabla que contiene la dirección de pantalla del primer byte de cada
     // carácter en la columna cero.
-    uint32_t *scrAddr = new uint32_t[CANVAS_HEIGHT];
+    uint32_t *scrAddr = new uint32_t[ZxDisplay::CANVAS_HEIGHT];
 
     // Tabla de traslación entre t-states y la dirección de la pantalla del
     // Spectrum que se vuelca en ese t-state o -1 si no le corresponde ninguna.

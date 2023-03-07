@@ -26,7 +26,7 @@
 class ZxView {
 
 public:
-    ZxView(ZxRect const &bounds);
+    ZxView(ZxRect bounds);
     virtual ~ZxView();
     void printText(unsigned char *buffer, unsigned int column, unsigned int row, unsigned char ink, unsigned char paper,
                    char const *text) const;
@@ -45,7 +45,7 @@ private:
 
 protected:
     ZxView *m_parent;
-    ZxRect const &m_bounds;
+    ZxRect const m_bounds;
 
 };
 

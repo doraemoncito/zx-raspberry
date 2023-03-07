@@ -180,7 +180,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
 #            raspi/kernel.cpp
 #    )
 
-    set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> -Wl,-Map=${TARGET}.map ${LDFLAGS} -T ${CIRCLEHOME}/circle.ld ${CRTBEGIN} <OBJECTS> -nostdlib -Wl,--start-group <LINK_LIBRARIES> -Wl,--end-group ${CRTEND} -o <TARGET>")
+#    set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> -Wl,-Map=${TARGET}.map ${LDFLAGS} -T ${CIRCLEHOME}/circle.ld ${CRTBEGIN} <OBJECTS> -nostdlib -Wl,--start-group <LINK_LIBRARIES> -Wl,--end-group ${CRTEND} -o <TARGET>")
 
     # https://gcc.gnu.org/onlinedocs/gcc/Link-Options.html
     # After printing the whole g++ command like by invoking it with the "-v" argument we can see that g++
@@ -203,6 +203,17 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
 #            "-Wl,--end-group"
 #    )
 
+    target_link_libraries(
+            ${PROJECT_NAME} PUBLIC
+            "-nostdlib"
+            "-T ${CIRCLEHOME}/circle.ld"
+            "-Wl,--section-start=.init=${ENTRY_POINT}"
+            "-Wl,--start-group"
+            ${LIBS}
+            ${EXTRALIBS}
+            "-Wl,--end-group"
+    )
+
     # post cmake 3.13 we ca use this:
     #target_link_options( ${PROJECT_NAME} PUBLIC "-T $(CIRCLEHOME)/circle.ld" )
 
@@ -215,8 +226,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
     )
 
 #    add_executable(${PROJECT_NAME}.elf main.cpp kernel.cpp)
-#    set(LIBS circle)rm zx
-    target_link_libraries(${PROJECT_NAME} ${LIBS} ${EXTRA_LIBS})
+#    set(LIBS circle)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${LIBS} ${EXTRA_LIBS})
     generate_kernel_image(${PROJECT_NAME} ${PROJECT_NAME})
 
 #    generate_kernel_image(${PROJECT_NAME} ${OUTPUT_NAME}.elf)

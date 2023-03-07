@@ -16,12 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "zxdialog.h"
-#include "zx48k_rom.h"
+#include <circle/logger.h>
 #include <cstdio>
 #include <cstring>
 #include <cstdint>
 #include "zxview.h"
+#include "zxdialog.h"
+#include "zx48k_rom.h"
 
 
 uint8_t ZxView::characters[0x90 * 0x08];
@@ -29,7 +30,7 @@ uint8_t ZxView::characters[0x90 * 0x08];
 /*
  * Renders an expanded version of the character set for easy drawing of UI elements.
  */
-ZxView::ZxView(ZxRect const &bounds) : m_parent(nullptr), m_bounds(bounds) {
+ZxView::ZxView(ZxRect const bounds) : m_parent(nullptr), m_bounds(bounds) {
 
     /*
      * The first 128 (0x80) characters in the ZX Spectrum character set are stored as 8 byte bit patters each

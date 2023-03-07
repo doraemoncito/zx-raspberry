@@ -25,7 +25,8 @@
 class ZxGroup : public ZxView {
 
 public:
-    ZxGroup(ZxRect const &bounds);
+    ZxGroup(ZxRect const bounds);
+    virtual ~ZxGroup();
     void insert(ZxView *child);
     void draw(uint8_t *buffer) override;
 

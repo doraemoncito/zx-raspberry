@@ -27,7 +27,7 @@
 class ZxLabel : public ZxView {
 
 public:
-    ZxLabel(const ZxRect &rect, const char *text);
+    ZxLabel(const ZxRect bounds, const char *text);
     void draw(uint8_t *buffer) override;
     void draw(uint8_t *buffer, unsigned char ink, unsigned char paper);
 

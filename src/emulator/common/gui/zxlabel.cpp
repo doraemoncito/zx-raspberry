@@ -19,7 +19,7 @@
 #include "zxlabel.h"
 
 
-ZxLabel::ZxLabel(const ZxRect &bounds, const char *text) : ZxView(bounds), text(text) {
+ZxLabel::ZxLabel(const ZxRect bounds, const char *text) : ZxView(bounds), text(text) {
 }
 
 

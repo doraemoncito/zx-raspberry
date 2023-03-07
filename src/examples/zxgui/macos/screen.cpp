@@ -16,6 +16,7 @@ Screen::Screen(QWidget *parent) : QWidget(parent)
     setBackgroundRole(QPalette::Base);
     setAutoFillBackground(true);
     bcmFrameBuffer = new CBcmFrameBuffer(352, 272, 4);
+    m_pAboutDialog = nullptr;
     m_zxDisplay.Initialize(ViajeAlCentroDeLaTierra_scr, bcmFrameBuffer);
 }
 
@@ -48,28 +49,35 @@ void Screen::paintEvent(QPaintEvent * /* event */)
     QByteArray videoMemory = QByteArray::fromRawData((const char *) bcmFrameBuffer->GetBuffer(), bcmFrameBuffer->GetSize());
 
     if (showDialog) {
-        auto zxDialog = ZxDialog(ZxRect(2, 12, 40, 10), "About ZX Raspberry");
+        if (m_pAboutDialog == nullptr) {
 
-        /*
-         * The default printable characters (32 (space) to 127 (copyright)) are stored at the end of the Spectrum's ROM at
-         * memory address 15616 (0x3D00) to 16383 (0x3FFF) and are referenced by the system variable CHARS which can be
-         * found at memory address 23606/7. Interestingly, the value in CHARS is actually 256 bytes lower than the first
-         * byte of the space character so that referencing a printable ASCII character does not need to consider the first
-         * 32 characters. As such, the CHARS value (by default) holds the address 15360 (0x3C00).
-         *
-         * The UDG characters (Gr-A to Gr-U) are stored at the end of the Spectrum's RAM at memory address 65368 (0xFF58)
-         * to 65535 (0xFFFF). As such, POKEing this address range has immediate effect on the UDG characters. The USR
-         * keyword (when followed by a single quoted character) provides a quick method to reference these addresses from
-         * BASIC. As with the printable characters, the location of the UDG characters is stored in the system variable UDG.
-         *
-         * Reference: https://enacademic.com/dic.nsf/enwiki/513468
-         */
-        zxDialog.insert(new ZxLabel(ZxRect(1, 2, 1, 1), "ZX Raspberry version 0.0.1"));
-        zxDialog.insert(new ZxLabel(ZxRect(1, 3, 1, 1), "Copyright \x7F 2020-2023 Jose Hernandez"));
-        zxDialog.insert(new ZxLabel(ZxRect(1, 6, 1, 1), "Build date: " __DATE__ " " __TIME__));
+            m_pAboutDialog = new ZxDialog(ZxRect(2, 12, 40, 10), "About ZX Raspberry");
 
-        zxDialog.draw(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()));
+            /*
+             * The default printable characters (32 (space) to 127 (copyright)) are stored at the end of the Spectrum's ROM at
+             * memory address 15616 (0x3D00) to 16383 (0x3FFF) and are referenced by the system variable CHARS which can be
+             * found at memory address 23606/7. Interestingly, the value in CHARS is actually 256 bytes lower than the first
+             * byte of the space character so that referencing a printable ASCII character does not need to consider the first
+             * 32 characters. As such, the CHARS value (by default) holds the address 15360 (0x3C00).
+             *
+             * The UDG characters (Gr-A to Gr-U) are stored at the end of the Spectrum's RAM at memory address 65368 (0xFF58)
+             * to 65535 (0xFFFF). As such, POKEing this address range has immediate effect on the UDG characters. The USR
+             * keyword (when followed by a single quoted character) provides a quick method to reference these addresses from
+             * BASIC. As with the printable characters, the location of the UDG characters is stored in the system variable UDG.
+             *
+             * Reference: https://enacademic.com/dic.nsf/enwiki/513468
+             */
+            m_pAboutDialog->insert(new ZxLabel(ZxRect(1, 2, 1, 1), "ZX Raspberry version 0.0.1"));
+            m_pAboutDialog->insert(new ZxLabel(ZxRect(1, 3, 1, 1), "Copyright \x7F 2020-2023 Jose Hernandez"));
+            m_pAboutDialog->insert(new ZxLabel(ZxRect(1, 6, 1, 1), "Build date: " __DATE__ " " __TIME__));
+        }
+        m_pAboutDialog->draw(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()));
+
+    } else if (!showDialog && (m_pAboutDialog != nullptr)) {
+        delete m_pAboutDialog;
+        m_pAboutDialog = nullptr;
     }
+
 
 #if 0
     zxDialog->printText(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()), 1, 30, 0xD, 0x0, "SCREEN DIMENSIONS:");
