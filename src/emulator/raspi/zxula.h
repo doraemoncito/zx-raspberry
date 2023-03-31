@@ -21,7 +21,7 @@
 
 #include <vector>
 #include "gamepad/JoystickAdapter.h"
-#include "gamepad/NullGamePadAdapter.h"
+#include "gamepad/NoneGamePadAdapter.h"
 #include "gamepad/KempstonGamePadAdapter.h"
 #include "gamepad/FullerGamePadAdapter.h"
 #include "gamepad/Sinclair1GamePadAdapter.h"
@@ -77,7 +77,7 @@ private:
     bool isAxisButtonReleased(const TGamePadState &pState, TGamePadButton Button, TGamePadAxis Axis);
 
     std::vector<JoystickAdapter *> m_gamepadAdapter {
-        new NullGamePadAdapter(),
+        new NoneGamePadAdapter(),
         new KempstonGamePadAdapter(),
         new FullerGamePadAdapter(),
         new Sinclair1GamePadAdapter(),

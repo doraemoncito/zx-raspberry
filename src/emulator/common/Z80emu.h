@@ -25,6 +25,8 @@
 #include "z80.h"
 #include "z80operations.h"
 
+class ZxDisplay;
+
 class Z80emu : public Z80operations
 {
 private:
@@ -33,9 +35,10 @@ private:
     uint8_t z80Ports[0x10000]{};
     bool finish{};
     uint8_t m_border;
+    ZxDisplay *m_pZxDisplay;
 
 public:
-    Z80emu();
+    Z80emu(ZxDisplay *pZxDisplay);
     ~Z80emu() override;
 
     uint8_t *getRam();

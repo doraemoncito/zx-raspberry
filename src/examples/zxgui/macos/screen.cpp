@@ -80,16 +80,16 @@ void Screen::paintEvent(QPaintEvent * /* event */)
 
 
 #if 0
-    zxDialog->printText(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()), 1, 30, 0xD, 0x0, "SCREEN DIMENSIONS:");
+    zxDialog->printText(reinterpret_cast<uint8_t *>(m_pBcmFrameBuffer->GetBuffer()), 1, 30, 0xD, 0x0, "SCREEN DIMENSIONS:");
     char const *innerDimensions = "Inner: 32*24 chars (256 x 192 pixels)";
-    zxDialog->printText(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()), 1, 31, 0xC, 0x0, innerDimensions);
+    zxDialog->printText(reinterpret_cast<uint8_t *>(m_pBcmFrameBuffer->GetBuffer()), 1, 31, 0xC, 0x0, innerDimensions);
     char const *outerDimensions = "Outer: 44*34 chars (352 x 272 pixels)";
-    zxDialog->printText(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()), 1, 32, 0xE, 0x0, outerDimensions);
+    zxDialog->printText(reinterpret_cast<uint8_t *>(m_pBcmFrameBuffer->GetBuffer()), 1, 32, 0xE, 0x0, outerDimensions);
 
     for (unsigned int y = 0; y < 34; y++) {
         char rowNum[10] = {};
         sprintf(rowNum, "%02d", y);
-        zxDialog->printText(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()), 41, y, 0xD, 0x0, rowNum);
+        zxDialog->printText(reinterpret_cast<uint8_t *>(m_pBcmFrameBuffer->GetBuffer()), 41, y, 0xD, 0x0, rowNum);
     }
 #endif
 
@@ -104,8 +104,8 @@ void Screen::paintEvent(QPaintEvent * /* event */)
         for (int j = 0; j < 44; j++) {
             for (int k=0; k<4; k++) {
                 uint8_t byte = videoMemory.at( (i * 176) + (j * 4) + (3 - k) );
-                raspberryPiImage.setPixel( (j * 8) + (k * 2), i, bcmFrameBuffer->palette[(byte & 0xF0) >> 4] );
-                raspberryPiImage.setPixel( (j * 8) + (k * 2) + 1 , i, bcmFrameBuffer->palette[byte & 0x0F] );
+                raspberryPiImage.setPixel( (j * 8) + (k * 2), i, m_pBcmFrameBuffer->palette[(byte & 0xF0) >> 4] );
+                raspberryPiImage.setPixel( (j * 8) + (k * 2) + 1 , i, m_pBcmFrameBuffer->palette[byte & 0x0F] );
             }
         }
     }

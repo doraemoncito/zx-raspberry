@@ -29,11 +29,14 @@
 #include <circle/usb/usbkeyboard.h>
 #include "common/clock.h"
 #include "common/gui/zxlabel.h"
+#include "common/gui/zxgroup.h"
 #include "../include/zx48k_rom.h"
 //#include "test_2scrn_y_ay8192_sna.h"
+//#include "fpga48all_sna.h"
+//#include "testkeys_sna.h"
 //#include "overscan_sna.h"
-#include "automania_sna.h"
-//#include "aquaplane_sna.h"
+//#include "automania_sna.h"
+#include "aquaplane_sna.h"
 #include "kernel.h"
 #include "Z80emu.h"
 #include "zxula.h"
@@ -117,8 +120,9 @@ bool CKernel::Initialize() {
     }
 
     if (bOK) {
-        z80emu = new Z80emu();
-        bOK = m_zxDisplay.Initialize(z80emu->getRam() + 0x4000, m_pFrameBuffer);
+        m_pZxDisplay = new ZxDisplay();
+        z80emu = new Z80emu(m_pZxDisplay);
+        bOK = m_pZxDisplay->Initialize(z80emu->getRam() + 0x4000, m_pFrameBuffer);
     }
 
     return bOK;
@@ -312,10 +316,12 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
     z80emu->initialise(zx48k_rom, zx48k_rom_len);
 
     m_Logger.Write(FromKernel, LogNotice, "Loading game in SNA format");
-//    z80emu->loadSnapshot(aquaplane_sna);
+    z80emu->loadSnapshot(aquaplane_sna);
 //    z80emu->loadSnapshot(overscan_sna);
 //    z80emu->loadSnapshot(test_2scrn_y_ay8192_sna);
-    z80emu->loadSnapshot(automania_sna);
+//    z80emu->loadSnapshot(automania_sna);
+//    z80emu->loadSnapshot(testkeys_sna);
+//    z80emu->loadSnapshot(fpga48all_sna);
 
     CCPUThrottle *ccpuThrottle = new CCPUThrottle(CPUSpeedUnknown);
 //    CCPUThrottle *ccpuThrottle = CCPUThrottle::Get();
@@ -354,6 +360,9 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
          *
          * In the Spectrum lexicon, a T-state is just a "time state" — a single cycle of the clock running at 3.5 Mhz
          * (3500000 instructions per-second).
+         *
+         * There are 69888 T-states per frame in a 48K machine.
+         *
          * According to the 128K ZX Spectrum Technical Information, there are 70908 T states per frame, and the '50 Hz'
          * interrupt occurs at 50.01 Hz.
          * 70908 t-states per frame * 50.01 Hz = 3.546 million t-states per second. Which is the clock rate of the
@@ -393,14 +402,17 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
 //            }
 //        }
 
+        /* Execute a frame's worth of T-states.  This will be roughly 20ms on a 48K ZX Spectrum.
+         * 20ms * 50 = 3.5MHz
+         */
         z80emu->execute(spectrumModel->tStatesPerScreenFrame());
 
         Clock::getInstance().endFrame();
 //        step = 0;
 //        nextEvent = stepStates[0];
 
-        /* A single ZX Spectrum display row takes 224 T-States, including the horizontal fly back. For every T-State, 2
-         * pixels are written to the display, so 128 T-States will pass for the 256 pixels in a display row. The ZX
+        /* A single ZX Spectrum display row takes 224 T-States, including the horizontal fly-back. For every T-State,
+         * 2 pixels are written to the display, so 128 T-States will pass for the 256 pixels in a display row. The ZX
          * Spectrum is clocked at 3.5 MHz, so if 2 pixels are written in a single CPU clock cycle, the pixel clock of
          * our display must be 7 MHz. A single line thus takes 448 pixel clock cycles.
          * http://www.zxdesign.info/vidparam.shtml
@@ -415,20 +427,25 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
 //        m_Logger.Write(FromKernel, LogNotice, "Setting the screen border");
 //#endif // DEBUG
 
-        m_zxDisplay.setBorder(z80emu->getBorder());
+        m_pZxDisplay->setBorder(z80emu->getBorder());
 
 //#ifdef DEBUG
 //        m_Logger.Write(FromKernel, LogNotice, "Refreshing video framebuffer");
 //#endif // DEBUG
 
-        m_zxDisplay.update(flash);
-        if (pKeyboard == nullptr) {
-            auto zxLabel1 = ZxLabel(ZxRect(2, 30, 1, 1), "Keyboard not found!");
-            auto zxLabel2 = ZxLabel(ZxRect(2, 31, 1, 1), "Please connect keyboard to continue.");
-
-            zxLabel1.draw(reinterpret_cast<uint8_t *>(m_pFrameBuffer->GetBuffer()));
-            zxLabel2.draw(reinterpret_cast<uint8_t *>(m_pFrameBuffer->GetBuffer()));
+        if (pKeyboard == nullptr && m_pZxDisplay->getUI() == nullptr) {
+            auto zxMessage = new ZxGroup({2, 30, 38, 2});
+            auto zxLabel1 = new ZxLabel({0, 0, 36, 1}, "Keyboard not found!");
+            auto zxLabel2 = new ZxLabel({0, 1, 36, 1}, "Please connect keyboard to continue.");
+            zxMessage->insert(zxLabel1);
+            zxMessage->insert(zxLabel2);
+            m_pZxDisplay->setUI(zxMessage);
+        } else if (pKeyboard != nullptr && m_pZxDisplay->getUI() != nullptr) {
+            delete m_pZxDisplay->getUI();
+            m_pZxDisplay->setUI(nullptr);
         }
+
+        m_pZxDisplay->update(flash);
 
         unsigned endClockTicks = m_Timer.GetClockTicks();
         unsigned usDelay = clockTicksToMicroSeconds(clockTicksPerFrame - (endClockTicks - startClockTicks));

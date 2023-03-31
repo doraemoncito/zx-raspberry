@@ -33,13 +33,16 @@ bool flash = false;
 unsigned int frameCounter = 0;
 
 
-ZxEmulatorScreen::ZxEmulatorScreen(Z80emu *z80emu, QWidget *parent) : QWidget(parent), m_z80emu(z80emu) {
-
+ZxEmulatorScreen::ZxEmulatorScreen(Z80emu *z80emu, ZxDisplay *pZxDisplay, QWidget *parent) :
+    QWidget(parent),
+    m_z80emu(z80emu),
+    m_pZxDisplay(pZxDisplay)
+{
     antiAliased = false;
     setBackgroundRole(QPalette::Base);
     setAutoFillBackground(true);
-    bcmFrameBuffer = new CBcmFrameBuffer(352, 296, 4);
-    m_zxDisplay.Initialize(m_z80emu->getRam() + 0x4000, bcmFrameBuffer);
+    m_pBcmFrameBuffer = new CBcmFrameBuffer(352, 296, 4);
+    m_pZxDisplay->Initialize(m_z80emu->getRam() + 0x4000, m_pBcmFrameBuffer);
     m_zxKeyboard = new ZxKeyboard();
 
     // Set the focus on this widget so that we can get keyboard events
@@ -88,8 +91,8 @@ void ZxEmulatorScreen::paintEvent(QPaintEvent * /* event */) {
         flash = !flash;
     }
 
-    m_zxDisplay.setBorder(m_z80emu->getBorder());
-    m_zxDisplay.update(flash);
+    m_pZxDisplay->setBorder(m_z80emu->getBorder());
+    m_pZxDisplay->update(flash);
 
     if (showDialog) {
         auto zxDialog = ZxDialog(ZxRect(2, 12, 40, 10), "About ZX Raspberry");
@@ -112,7 +115,7 @@ void ZxEmulatorScreen::paintEvent(QPaintEvent * /* event */) {
         zxDialog.insert(new ZxLabel(ZxRect(1, 3, 1, 1), "Copyright \x7F 2020-2023 Jose Hernandez"));
         zxDialog.insert(new ZxLabel(ZxRect(1, 6, 1, 1), "Build date: " __DATE__ " " __TIME__));
 
-        zxDialog.draw(reinterpret_cast<uint8_t *>(bcmFrameBuffer->GetBuffer()));
+        zxDialog.draw(reinterpret_cast<uint8_t *>(m_pBcmFrameBuffer->GetBuffer()));
     }
 
 /* Reads Raspberry Pi framebuffer and turns it into a QImage object.
@@ -126,8 +129,8 @@ void ZxEmulatorScreen::paintEvent(QPaintEvent * /* event */) {
         for (int j = 0; j < 44; j++) {
             for (int k=0; k<4; k++) {
                 uint8_t byte = videoMemory.at( (i * 176) + (j * 4) + (3 - k) );
-                image.setPixel( (j * 8) + (k * 2), i, bcmFrameBuffer->palette[(byte & 0xF0u) >> 0x04u] );
-                image.setPixel( (j * 8) + (k * 2) + 1 , i, bcmFrameBuffer->palette[byte & 0x0Fu] );
+                image.setPixel( (j * 8) + (k * 2), i, m_pBcmFrameBuffer->palette[(byte & 0xF0u) >> 0x04u] );
+                image.setPixel( (j * 8) + (k * 2) + 1 , i, m_pBcmFrameBuffer->palette[byte & 0x0Fu] );
             }
         }
     }
@@ -136,9 +139,9 @@ void ZxEmulatorScreen::paintEvent(QPaintEvent * /* event */) {
     for (int i = 0x0000; i < 0x0128; i++) {
         // Iterate over all columns 2 pixels at a time. i.e. 0 to 176 (176 pixel pairs = 352 screen width / 2)
         for (int j = 0x0000; j < 0x00B0; j++) {
-            uint8_t byte = reinterpret_cast<char *>(bcmFrameBuffer->GetBuffer())[(i * 0x00B0) + j];
-            image.setPixel((j * 2), i, bcmFrameBuffer->palette[(byte & 0xF0u) >> 0x04u]);
-            image.setPixel((j * 2) + 1, i, bcmFrameBuffer->palette[byte & 0x0Fu]);
+            uint8_t byte = reinterpret_cast<char *>(m_pBcmFrameBuffer->GetBuffer())[(i * 0x00B0) + j];
+            image.setPixel((j * 2), i, m_pBcmFrameBuffer->palette[(byte & 0xF0u) >> 0x04u]);
+            image.setPixel((j * 2) + 1, i, m_pBcmFrameBuffer->palette[byte & 0x0Fu]);
         }
     }
 #endif

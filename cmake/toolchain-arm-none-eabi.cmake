@@ -20,9 +20,10 @@ include(CMakeForceCompiler)
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 
-# set the toolchain prefix for cross compilation
-set(CROSS_COMPILE arm-none-eabi-)
-#set(CROSS_COMPILE /usr/local/opt/gcc-arm-10.3-2021.07-x86_64-arm-none-eabi/bin/arm-none-eabi-)
+# Set the toolchain prefix for cross compilation
+# NOTE: IntelliJ complains if we  do not specify the full path in the CMAKE_C_COMPILER and CMAKE_CXX_COMPILER variables
+#set(CROSS_COMPILE arm-none-eabi-)
+set(CROSS_COMPILE /usr/local/opt/gcc-arm-10.3-2021.07-x86_64-arm-none-eabi/bin/arm-none-eabi-)
 
 set(CMAKE_C_COMPILER ${CROSS_COMPILE}gcc)
 set(CMAKE_C_COMPILER_TARGET ${CROSS_COMPILE}gcc)

@@ -80,7 +80,7 @@ private:
     int m_nPosX{};
     int m_nPosY{};
 
-    ZxDisplay m_zxDisplay;
+    ZxDisplay *m_pZxDisplay;
     CBcmFrameBuffer *m_pFrameBuffer{};
     Z80emu *z80emu{};
 

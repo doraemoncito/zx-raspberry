@@ -3,9 +3,12 @@ project(zxscreen LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
+# Required to compile Qt code on macOS
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+    set(CMAKE_AUTOUIC ON)
+endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 set(INSTALL_EXAMPLEDIR "examples")
 

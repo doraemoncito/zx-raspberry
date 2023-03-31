@@ -33,8 +33,15 @@ public:
 
     bool Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer);
     void update(bool flash);
+
     void setBorder(uint8_t m_border);
+    void updateBorder(uint8_t portFE, uint32_t tstates);
+
     void setUI(ZxView *pZxView);
+    ZxView *getUI() {
+        return m_pZxView;
+    };
+
 
     /* These are the visible screen dimensions, which are smaller than the actual dimensions suggested by the
      * screen timings since it takes the electron beam some time to fly back to the beginning or top of the screen:
@@ -71,6 +78,30 @@ private:
 
     uint8_t *m_pBaseBuffer;
     uint8_t *m_pBuffer;
+    uint8_t *m_pTargetBuffer8;
+
+    // T-state at which the border was last changed (though port 0xFEu) on screen.
+    uint32_t m_lastBorderChanged;
+
+    const uint16_t m_palette[16] = {
+        0x0000u, // black
+        0x0010u, // blue
+        0x8000u, // red
+        0x8010u, // magenta
+        0x0400u, // green
+        0x0410u, // cyan
+        0x8400u, // yellow
+        0x8410u, // white
+        0x0000u, // black
+        0x001Fu, // bright blue
+        0xF800u, // bright red
+        0xF81Fu, // bright magenta
+        0x07E0u, // bright green
+        0x07FFu, // bright cyan
+        0xFFE0u, // bright yellow
+        0xFFFFu // bright white
+    };
+
 };
 
 #endif // ZXDISPLAY_H

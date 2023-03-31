@@ -161,8 +161,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
             raspi/gamepad/Sinclair2GamePadAdapter.h
             raspi/gamepad/KeyboardGamePadAdapter.cpp
             raspi/gamepad/KeyboardGamePadAdapter.h
-            raspi/gamepad/NullGamePadAdapter.cpp
-            raspi/gamepad/NullGamePadAdapter.h
+            raspi/gamepad/NoneGamePadAdapter.cpp
+            raspi/gamepad/NoneGamePadAdapter.h
     )
 
     set(KERNEL_IMG kernel7l.img)

@@ -26,7 +26,7 @@ class QTimer;
 class ZxEmulatorScreen;
 class Z80emu;
 class ZxHardwareModel;
-
+class ZxDisplay;
 
 class ZxEmulatorWindow : public QWidget {
 Q_OBJECT
@@ -42,6 +42,7 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
 
 private:
+    ZxDisplay *m_pZxDisplay;
     ZxEmulatorScreen *m_screen;
     QTimer *m_timer;
     ZxHardwareModel *m_model;

@@ -21,7 +21,7 @@
 
 #include "JoystickAdapter.h"
 
-class NullGamePadAdapter : public JoystickAdapter {
+class NoneGamePadAdapter : public JoystickAdapter {
 
 public:
     std::string name() override;

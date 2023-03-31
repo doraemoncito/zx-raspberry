@@ -21,9 +21,13 @@
 #include <cstdint>
 #include <cstring>
 #include <circle/bcmframebuffer.h>
+#include <circle/logger.h>
 #include <circle/util.h>
 #include "zxdisplay.h"
 #include "gui/zxview.h"
+
+
+static const char msgFromDisplay[] = "Display";
 
 
 ZxDisplay::ZxDisplay()
@@ -32,11 +36,12 @@ ZxDisplay::ZxDisplay()
           m_pVideoMem(nullptr),
           m_border(0xFu),
           m_bBorderChanged(false),
-          m_bDoubleBufferingEnabled(true),
+          m_bDoubleBufferingEnabled(false),
           m_bVSync(false),
           m_bBufferSwapped(false),
           m_pBaseBuffer(nullptr),
-          m_pBuffer(nullptr) {
+          m_pBuffer(nullptr),
+          m_lastBorderChanged(0) {
 }
 
 
@@ -65,30 +70,18 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
     m_pFrameBuffer = pFrameBuffer;
     assert(m_pFrameBuffer != nullptr);
 
-    // Color palette definition in RGB565 format.
-    // Needs to be defined BEFORE the call to initialize the framebuffer.
-    m_pFrameBuffer->SetPalette(0x0, 0x0000u); // black
-    m_pFrameBuffer->SetPalette(0x1, 0x0010u); // blue
-    m_pFrameBuffer->SetPalette(0x2, 0x8000u); // red
-    m_pFrameBuffer->SetPalette(0x3, 0x8010u); // magenta
-    m_pFrameBuffer->SetPalette(0x4, 0x0400u); // green
-    m_pFrameBuffer->SetPalette(0x5, 0x0410u); // cyan
-    m_pFrameBuffer->SetPalette(0x6, 0x8400u); // yellow
-    m_pFrameBuffer->SetPalette(0x7, 0x8410u); // white
-    m_pFrameBuffer->SetPalette(0x8, 0x0000u); // black
-    m_pFrameBuffer->SetPalette(0x9, 0x001Fu); // bright blue
-    m_pFrameBuffer->SetPalette(0xA, 0xF800u); // bright red
-    m_pFrameBuffer->SetPalette(0xB, 0xF81Fu); // bright magenta
-    m_pFrameBuffer->SetPalette(0xC, 0x07E0u); // bright green
-    m_pFrameBuffer->SetPalette(0xD, 0x07FFu); // bright cyan
-    m_pFrameBuffer->SetPalette(0xE, 0xFFE0u); // bright yellow
-    m_pFrameBuffer->SetPalette(0xF, 0xFFFFu); // bright white
+    /* Set-up the colour palette definition in RGB565 format.
+     * Needs to be defined BEFORE the call to initialize the framebuffer.
+     */
+    for (unsigned long i = 0; i < (sizeof(m_palette)/sizeof(uint16_t)); i++) {
+        m_pFrameBuffer->SetPalette(i, m_palette[i]);
+    }
 
     if (!m_pFrameBuffer->Initialize()) {
         return false;
     }
 
-    m_pBaseBuffer = reinterpret_cast<uint8_t *>(m_pFrameBuffer->GetBuffer());
+    m_pBaseBuffer = m_pTargetBuffer8 = reinterpret_cast<uint8_t *>(m_pFrameBuffer->GetBuffer());
     m_pBuffer = m_pBaseBuffer + SCREEN_WIDTH * (SCREEN_HEIGHT / 2);
 
     std::memset(m_pBaseBuffer, ((m_border << 0x4u) | m_border), m_pFrameBuffer->GetSize());
@@ -106,8 +99,8 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
      * I2 to I0 is the INK colour
      */
     for (int attr = 0; attr < 128; attr++) {
-        unsigned ink = attr & 0x07;
-        unsigned paper = (attr & 0x78) >> 3;
+        unsigned ink = attr & 0x07u;
+        unsigned paper = (attr & 0x78u) >> 3;
         // Brighten up the ink colour if the brightness bit is on
         if (attr & 0x40) {
             ink |= 0x08;
@@ -155,8 +148,8 @@ void ZxDisplay::update(bool flash) {
      * Determine the location of the next target buffer.  If double buffering is not enabled, the next target buffer
      * will always be the base buffer.
      */
-    auto pTargetBuffer8 = (m_bDoubleBufferingEnabled && m_bBufferSwapped) ? m_pBaseBuffer : m_pBuffer;
-    auto pTargetBuffer32 = reinterpret_cast<uint32_t *>(pTargetBuffer8);
+    m_pTargetBuffer8 = (m_bDoubleBufferingEnabled && m_bBufferSwapped) ? m_pBuffer : m_pBaseBuffer;
+    auto pTargetBuffer32 = reinterpret_cast<uint32_t *>(m_pTargetBuffer8);
 
     /*
      * Calculate the index into the frame buffer to perform fast translation of ZX Spectrum video memory to Raspberry Pi
@@ -172,13 +165,14 @@ void ZxDisplay::update(bool flash) {
 
     static uint8_t flashMask[] = {0x7Fu, 0xFFu};
 
-    m_bBorderChanged = true;
+    // Always force a border repaint if double buffering is enabled.
+//    m_bBorderChanged = m_bDoubleBufferingEnabled;
 
     // Draw the border
-    if (m_bBorderChanged) {
-        std::memset(pTargetBuffer8, ((m_border << 0x4u) | m_border), (SCREEN_WIDTH * SCREEN_HEIGHT) / 2 /* 2 pixels per byte */);
-        m_bBorderChanged = false;
-    }
+//    if (m_bBorderChanged) {
+//        std::memset(pTargetBuffer8, ((m_border << 0x4u) | m_border), (SCREEN_WIDTH * SCREEN_HEIGHT) / 2 /* 2 pixels per byte */);
+//        m_bBorderChanged = false;
+//    }
 
     // The ZX Spectrum screen is made up of 3 blocks of 2048 (0x0800) bytes each
     for (unsigned int block = 0x0000; block < 0x1800; block += 0x0800) {
@@ -199,8 +193,10 @@ void ZxDisplay::update(bool flash) {
     }
 
     if (m_pZxView != nullptr) {
-        m_pZxView->draw(pTargetBuffer8);
+        m_pZxView->draw(m_pTargetBuffer8);
     }
+
+    m_lastBorderChanged = 0;
 }
 
 
@@ -209,6 +205,42 @@ void ZxDisplay::setBorder(uint8_t border) {
     if (this->m_border != border) {
         this->m_bBorderChanged = true;
         this->m_border = border;
+    }
+}
+
+
+void ZxDisplay::updateBorder(uint8_t border, uint32_t tstates) {
+
+    uint8_t colour = (border << 0x4u) | border;
+
+    // FOR TESTING ONLY
+    for (unsigned int row = 0x0000; row < 0x0B00; row += 0x0B0) {
+        for (unsigned int column = 0x0000; column < 0x0008; column++) {
+            m_pTargetBuffer8[row + column] = colour;
+        }
+    }
+
+    CLogger::Get()->Write(msgFromDisplay, LogDebug,
+                          "[update border] m_lastBorderChanged: %d, portFE: 0x%02X, T-States: %d",
+                          m_lastBorderChanged, border, tstates);
+
+    if (m_lastBorderChanged < tstates) {
+
+        tstates &= 0X00FFFFFCu;
+        while (m_lastBorderChanged < tstates) {
+// TODO: work out the position to draw at based on the number of states elapsed.
+//            int position = m_states2border[m_lastBorderChanged];
+            m_lastBorderChanged += 4;
+
+//            if ((m_lastBorderChanged != 0XF0CAB0BAu) && (m_pTargetBuffer8[m_lastBorderChanged] != colour)) {
+//                // draw the border, 8 pixels (or 4 bytes) at a time
+//                for (int i = 0; i < 4; i++) {
+//                    m_pTargetBuffer8[m_lastBorderChanged + i] = colour;
+//                }
+//            }
+        }
+
+        m_lastBorderChanged = tstates;
     }
 }
 

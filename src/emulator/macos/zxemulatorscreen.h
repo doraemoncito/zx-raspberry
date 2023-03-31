@@ -35,7 +35,7 @@ class ZxEmulatorScreen : public QWidget {
 Q_OBJECT
 
 public:
-    explicit ZxEmulatorScreen(Z80emu *z80emu, QWidget *parent = nullptr);
+    explicit ZxEmulatorScreen(Z80emu *z80emu, ZxDisplay *pZxDisplay, QWidget *parent = nullptr);
     ~ZxEmulatorScreen();
 
     [[nodiscard]] QSize minimumSizeHint() const override;
@@ -53,8 +53,8 @@ private:
 
     Z80emu *m_z80emu;
     ZxKeyboard *m_zxKeyboard;
-    ZxDisplay m_zxDisplay;
-    CBcmFrameBuffer *bcmFrameBuffer = nullptr;
+    ZxDisplay *m_pZxDisplay;
+    CBcmFrameBuffer *m_pBcmFrameBuffer = nullptr;
 
     QImage image = QImage(352, 296, QImage::Format_RGB32);
 };

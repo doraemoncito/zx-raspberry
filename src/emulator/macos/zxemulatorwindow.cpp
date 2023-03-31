@@ -22,18 +22,19 @@
 #include <QTimer>
 #include <common/clock.h>
 #include <common/hardware/zxhardwaremodel48k.h>
-#include <common/automania_sna.h>
 #include <zx48k_rom.h>
 #include <common/Z80emu.h>
 #include <common/aquaplane_sna.h>
+//#include <common/automania_sna.h>
 
 
 ZxEmulatorWindow::ZxEmulatorWindow() {
 
-    m_z80emu = new Z80emu();
+    m_pZxDisplay = new ZxDisplay();
+    m_z80emu = new Z80emu(m_pZxDisplay);
     m_timer = new QTimer(this);
     m_model = new ZxHardwareModel48k();
-    m_screen = new ZxEmulatorScreen(m_z80emu, this);
+    m_screen = new ZxEmulatorScreen(m_z80emu, m_pZxDisplay, this);
     auto *mainLayout = new QGridLayout;
 
     mainLayout->setColumnStretch(0, 1);
@@ -58,8 +59,8 @@ void ZxEmulatorWindow::initialise() {
 
     m_z80emu->initialise(zx48k_rom, zx48k_rom_len);
     qDebug() << "Loading game in snapshot format";
-//    m_z80emu->loadSnapshot(aquaplane_sna);
-    m_z80emu->loadSnapshot(automania_sna);
+    m_z80emu->loadSnapshot(aquaplane_sna);
+//    m_z80emu->loadSnapshot(automania_sna);
 
     Clock::getInstance().setSpectrumModel(m_model);
 

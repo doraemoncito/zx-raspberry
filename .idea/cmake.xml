@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeSharedSettings">
+    <configurations>
+      <configuration PROFILE_NAME="Debug on ARM" ENABLED="true" CONFIG_NAME="Debug" TOOLCHAIN_NAME="GCC 10.3 cross compiler on Vagrant VM" GENERATION_OPTIONS="-G &quot;Unix Makefiles&quot; -DCMAKE_TOOLCHAIN_FILE=$CMakeProjectDir$/cmake/toolchain-arm-none-eabi.cmake -DCMAKE_MAKE_PROGRAM=/usr/bin/make" BUILD_OPTIONS="-j 4">
+        <ADDITIONAL_GENERATION_ENVIRONMENT>
+          <envs>
+            <env name="PATH" value="/usr/local/opt/gcc-arm-10.3-2021.07-x86_64-arm-none-eabi/bin/:$PATH" />
+          </envs>
+        </ADDITIONAL_GENERATION_ENVIRONMENT>
+      </configuration>
+    </configurations>
+  </component>
+</project>

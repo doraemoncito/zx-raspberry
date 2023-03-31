@@ -22,6 +22,7 @@
 #include <circle/logger.h>
 #include <circle/util.h>
 #include <common/hardware/zxhardwaremodel48k.h>
+#include "zxdisplay.h"
 #include "Z80emu.h"
 #include "keyboard.h"
 #include "clock.h"
@@ -47,7 +48,10 @@ using namespace std;
 static const char msgFromULA[] = "ULA";
 
 
-Z80emu::Z80emu() : cpu(this), m_border(0x07u)
+Z80emu::Z80emu(ZxDisplay *pZxDisplay) :
+    cpu(this),
+    m_border(0x07u),
+    m_pZxDisplay(pZxDisplay)
 {
     Clock::getInstance().reset();
 
@@ -196,32 +200,50 @@ void Z80emu::internalOutPort(uint16_t port, uint8_t value) {
     }
 }
 
+
 void Z80emu::outPort(uint16_t port, uint8_t value) {
     // 4 clocks for write byte to bus
     Clock::getInstance().addTstates(4);
 
-    /* OUT to port xxFE (the high byte is ignored) will set the border colour to {d2, d1, d0}, drive the MIC socket
-     * with d3 and the loudspeaker with d4.(again, polarity?) d5–d7 are not used.
-     * Reference: https://faqwiki.zxnet.co.uk/wiki/ZX_Spectrum_ULA
+    /* NOTE: All even ports on the ZX spectrum are allocated to the ULA but to avoid problems with other I/O devices
+     * only Port 0xFE should be used.
      *
-     * Bit   7   6   5   4   3   2   1   0
-     *     +-------------------------------+
-     *     |   |   |   | E | M |   Border  |
-     *     +-------------------------------+
+     * Define a preprocessor constant named USE_ALL_EVEN_OUTPUT_PORTS to send output to all even ports.  Otherwise, we
+     * ignore "OUT" instructions sent to ports other that 0x00FEu.
      */
-//    if ((port & 0x00FFu) == 0x00FEu) {  // All even ports on the ZX spectrum are allocated to the ULA
-    if (!(port & 0x0001u)) {  // All even ports on the ZX spectrum are allocated to the ULA
+#ifdef USE_ALL_EVEN_OUTPUT_PORTS
+    if (!(port & 0x0001u)) {
+#else
+    if ((port & 0x00FFu) == 0x00FEu) {
+#endif
+        /* OUT to port xxFE (the high byte is ignored) will set the border colour using the lowest three bits
+         * {d2, d1, d0}, drive the MIC socket with d3 and the EAR socket (loudspeaker) with d4. d5 to d7 are not used.
+         * The EAR and MIC sockets are connected only by resistors, so activating one activates the other; the EAR is
+         * generally used for output as it produces a louder sound.
+         *
+         * Reference:
+         *  - [Sinclair Wiki: ZX Spectrum ULA](https://faqwiki.zxnet.co.uk/wiki/ZX_Spectrum_ULA)
+         *  - [World of Spectrum: 16K / 48K ZX Spectrum Reference](https://worldofspectrum.org/faq/reference/48kreference.htm#PortFE)
+         *
+         * Bit   7   6   5   4   3   2   1   0
+         *     +-------------------------------+
+         *     |   |   |   | E | M |   Border  |
+         *     +-------------------------------+
+         */
 
-//        // Has the border value changed?
-//        if (m_border != (value & 0x07u)) {
+        // Has the border value changed?
+        if (m_border != (value & 0x07u)) {
             m_border = value & 0x07u;
+            auto tstates = Clock::getInstance().getTstates();
+            m_pZxDisplay->updateBorder(m_border, tstates);
 //#ifdef DEBUG
-//            CLogger::Get()->Write(msgFromULA, LogDebug,"[PORT OUT] value 0x%02X --> port 0x%04X; Border colour: '0x%1X'", value, port, m_border);
+//            CLogger::Get()->Write(msgFromULA, LogDebug,"[PORT OUT] value 0x%02X --> port 0x%04X; Border colour: '0x%1X', T-States: %d",
+//                                  value, port, m_border, tstates);
 //#endif //DEBUG
-//        }
-
-    } else {
-        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT OUT] value 0x%02X --> port 0x%04X", value, port);
+        }
+//
+//    } else {
+//        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT OUT] value 0x%02X --> port 0x%04X", value, port);
     }
 
     z80Ports[port] = value;

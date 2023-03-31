@@ -22,7 +22,7 @@
 #include <list>
 #include <memory>
 #include "gamepad/JoystickAdapter.h"
-#include "gamepad/NullGamePadAdapter.h"
+#include "gamepad/NoneGamePadAdapter.h"
 #include "gamepad/KempstonGamePadAdapter.h"
 #include "gamepad/FullerGamePadAdapter.h"
 #include "gamepad/Sinclair1GamePadAdapter.h"
@@ -36,7 +36,7 @@ class ZxGamepad : JoystickAdapter {
 public:
     ZxGamepad() {
 
-        adapters.push_back(std::move(std::make_unique<NullGamePadAdapter>()));
+        adapters.push_back(std::move(std::make_unique<NoneGamePadAdapter>()));
         adapters.push_back(std::move(std::make_unique<KempstonGamePadAdapter>()));
         adapters.push_back(std::move(std::make_unique<FullerGamePadAdapter>()));
         adapters.push_back(std::move(std::make_unique<Sinclair1GamePadAdapter>()));
@@ -47,7 +47,7 @@ public:
 
 private:
 
-    std::list<std::unique_ptr<JoystickAdapter>> adapters;
+    std::list<std::unique_ptr<JoystickAdapter>> adapters{};
     unsigned int currentAdapter = 0;
 
 };

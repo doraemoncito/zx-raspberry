@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "NullGamePadAdapter.h"
+#include "NoneGamePadAdapter.h"
 
-std::string NullGamePadAdapter::name() {
+std::string NoneGamePadAdapter::name() {
 
     // joystick emulation disabled
     return std::string("");
