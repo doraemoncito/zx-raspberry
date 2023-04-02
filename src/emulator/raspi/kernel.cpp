@@ -35,8 +35,8 @@
 //#include "fpga48all_sna.h"
 //#include "testkeys_sna.h"
 //#include "overscan_sna.h"
-//#include "automania_sna.h"
-#include "aquaplane_sna.h"
+#include "automania_sna.h"
+//#include "aquaplane_sna.h"
 #include "kernel.h"
 #include "Z80emu.h"
 #include "zxula.h"
@@ -113,8 +113,8 @@ bool CKernel::Initialize() {
          * anyone time.
          */
         m_pFrameBuffer = new CBcmFrameBuffer(
-                ZxDisplay::SCREEN_WIDTH, ZxDisplay::SCREEN_HEIGHT, ZxDisplay::COLOUR_DEPTH,
-                ZxDisplay::SCREEN_WIDTH, ZxDisplay::SCREEN_HEIGHT * 2, 0,
+                ZxDisplay::DISPLAY_WIDTH, ZxDisplay::DISPLAY_HEIGHT, ZxDisplay::COLOUR_DEPTH,
+                ZxDisplay::DISPLAY_WIDTH, ZxDisplay::DISPLAY_HEIGHT * 2, 0,
                 true);
         bOK = (m_pFrameBuffer != nullptr);
     }
@@ -141,113 +141,6 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
     return us;
 }
 
-// NOTE: THIS SECTION OF CODE HAS BEEN TAKEN FROM JSPECCY
-///*
-// * Cada línea completa de imagen dura 224 T-Estados, divididos en:
-// * 128 T-Estados en los que se dibujan los 256 pixeles de pantalla
-// * 24 T-Estados en los que se dibujan los 48 pixeles del borde derecho
-// * 48 T-Estados iniciales de H-Sync y blanking
-// * 24 T-Estados en los que se dibujan 48 pixeles del borde izquierdo
-// *
-// * Cada pantalla consta de 312 líneas divididas en:
-// * 16 líneas en las cuales el haz vuelve a la parte superior de la pantalla
-// * 48 líneas de borde superior
-// * 192 líneas de pantalla
-// * 56 líneas de borde inferior de las cuales se ven solo 48
-// */
-//int CKernel::tStatesToScreenPixel48k(int tstates) {
-//    tstates %= spectrumModel->tStatesPerScreenFrame();
-//    int row = tstates / spectrumModel->tStatesPerScreenLine();
-//    int col = tstates % spectrumModel->tStatesPerScreenLine();
-//
-//    // Quitamos las líneas que no se ven por arriba y por abajo
-//    if (row < (64 - TOP_BORDER - 1) || row > (256 + BOTTOM_BORDER - 1)) {
-//        return 0xf0cab0ba;
-//    }
-//
-//    // Caso especial de la primera línea
-//    if (row == (64 - TOP_BORDER - 1) && col < 200 + (24 - LEFT_BORDER / 2)) {
-//        return 0xf0cab0ba;
-//    }
-//
-//    // Caso especial de la última línea
-//    if (row == (256 + BOTTOM_BORDER - 1) && col > (127 + RIGHT_BORDER / 2)) {
-//        return 0xf0cab0ba;
-//    }
-//
-//    // Quitamos la parte del borde derecho que no se ve, la zona de H-Sync
-//    // y la parte izquierda del borde que tampoco se ve
-//    if (col > (127 + RIGHT_BORDER / 2) && col < 200 + (24 - LEFT_BORDER / 2)) {
-//        return 0xf0cab0ba;
-//    }
-//
-//    // Quitamos la parte correspondiente a SCREEN$
-//    if (row > 63 && row < 256 && col < 128) {
-//        return 0xf0cab0ba;
-//    }
-//
-//    // 176 t-estados de línea es en medio de la zona de retrazo
-//    if (col > 176) {
-//        row++;
-//        col -= 200 + (24 - LEFT_BORDER / 2);
-//    } else {
-//        col += RIGHT_BORDER / 2 - (RIGHT_BORDER - LEFT_BORDER) / 2;
-//    }
-//
-//    row -= (64 - TOP_BORDER);
-//
-//    return row * SCREEN_WIDTH + col * 2;
-//}
-//
-//
-//void CKernel::buildScreenTables48k() {
-//    uint8_t col;
-//    int scan;
-//
-//    firstBorderUpdate = ((64 - TOP_BORDER) * spectrumModel->tStatesPerScreenLine()) - LEFT_BORDER / 2;
-//    lastBorderUpdate = (255 + BOTTOM_BORDER) * spectrumModel->tStatesPerScreenLine() + 128 + RIGHT_BORDER;
-//    m_Logger.Write(FromKernel, LogNotice, "First border update: %d", firstBorderUpdate);
-//    m_Logger.Write(FromKernel, LogNotice, "Last border update: %d", lastBorderUpdate);
-//
-//    std::fill(states2scr, states2scr + spectrumModel->tStatesPerScreenFrame() + 100, 0);
-//
-//    step = 0;
-//    for (int tstates = spectrumModel->tStatesToFirstScreenByte(); tstates < 57248; tstates += 4) {
-//        col = (tstates % spectrumModel->tStatesPerScreenLine()) / 4;
-//
-//        if (col > 31) {
-//            continue;
-//        }
-//        scan = tstates / spectrumModel->tStatesPerScreenLine() - spectrumModel->upBorderHeight();
-//        states2scr[tstates + 2] = scrAddr[scan] + col;
-//        stepStates[step++] = tstates + 2;
-//    }
-//
-//    std::fill(states2border, states2border + spectrumModel->tStatesPerScreenFrame() + 100, 0xF0CAB0BA);
-//
-//    for (uint32_t tstates = firstBorderUpdate; tstates < lastBorderUpdate; tstates += 4) {
-//        states2border[tstates] = tStatesToScreenPixel48k(tstates);
-//        states2border[tstates + 1] = states2border[tstates];
-//        states2border[tstates + 2] = states2border[tstates];
-//        states2border[tstates + 3] = states2border[tstates];
-//    }
-//
-//    std::fill(delayTstates, delayTstates + spectrumModel->tStatesPerScreenFrame() + 200, 0x0);
-//
-//    for (int idx = 14335; idx < 57247; idx += spectrumModel->tStatesPerScreenLine()) {
-//        for (int ndx = 0; ndx < 128; ndx += 8) {
-//            int frame = idx + ndx;
-//            delayTstates[frame++] = 6;
-//            delayTstates[frame++] = 5;
-//            delayTstates[frame++] = 4;
-//            delayTstates[frame++] = 3;
-//            delayTstates[frame++] = 2;
-//            delayTstates[frame++] = 1;
-//            delayTstates[frame++] = 0;
-//            delayTstates[frame++] = 0;
-//        }
-//    }
-//}
 
 [[noreturn]] TShutdownMode CKernel::Run() {
 
@@ -316,10 +209,10 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
     z80emu->initialise(zx48k_rom, zx48k_rom_len);
 
     m_Logger.Write(FromKernel, LogNotice, "Loading game in SNA format");
-    z80emu->loadSnapshot(aquaplane_sna);
+//    z80emu->loadSnapshot(aquaplane_sna);
 //    z80emu->loadSnapshot(overscan_sna);
 //    z80emu->loadSnapshot(test_2scrn_y_ay8192_sna);
-//    z80emu->loadSnapshot(automania_sna);
+    z80emu->loadSnapshot(automania_sna);
 //    z80emu->loadSnapshot(testkeys_sna);
 //    z80emu->loadSnapshot(fpga48all_sna);
 
@@ -422,12 +315,6 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
         if (++frameCounter % 16 == 0) {
             flash = !flash;
         }
-
-//#ifdef DEBUG
-//        m_Logger.Write(FromKernel, LogNotice, "Setting the screen border");
-//#endif // DEBUG
-
-        m_pZxDisplay->setBorder(z80emu->getBorder());
 
 //#ifdef DEBUG
 //        m_Logger.Write(FromKernel, LogNotice, "Refreshing video framebuffer");

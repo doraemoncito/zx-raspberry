@@ -37,8 +37,8 @@ struct membuf: std::streambuf {
 
 struct imemstream: virtual membuf, std::istream {
     imemstream(unsigned char const* base, size_t size)
-        : membuf(base, size)
-        , std::istream(static_cast<std::streambuf*>(this)) {
+        : membuf(base, size),
+        std::istream(static_cast<std::streambuf*>(this)) {
     }
 };
 

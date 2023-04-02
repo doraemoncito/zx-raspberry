@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 Jose Hernandez
+ * Copyright (c) 2020-2023 Jose Hernandez
  * Copyright (c) 2017 José Luis Sanchez
  *
  * This file is part of ZxRaspberry.
@@ -25,9 +25,7 @@
 #include <circle/util.h>
 #include "zxdisplay.h"
 #include "gui/zxview.h"
-
-
-static const char msgFromDisplay[] = "Display";
+#include "clock.h"
 
 
 ZxDisplay::ZxDisplay()
@@ -35,13 +33,12 @@ ZxDisplay::ZxDisplay()
           m_pFrameBuffer(nullptr),
           m_pVideoMem(nullptr),
           m_border(0xFu),
-          m_bBorderChanged(false),
           m_bDoubleBufferingEnabled(false),
           m_bVSync(false),
           m_bBufferSwapped(false),
           m_pBaseBuffer(nullptr),
           m_pBuffer(nullptr),
-          m_lastBorderChanged(0) {
+          m_lastBorderChange(0) {
 }
 
 
@@ -70,7 +67,7 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
     m_pFrameBuffer = pFrameBuffer;
     assert(m_pFrameBuffer != nullptr);
 
-    /* Set-up the colour palette definition in RGB565 format.
+    /* Set up the colour palette definition in RGB565 format.
      * Needs to be defined BEFORE the call to initialize the framebuffer.
      */
     for (unsigned long i = 0; i < (sizeof(m_palette)/sizeof(uint16_t)); i++) {
@@ -82,7 +79,8 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
     }
 
     m_pBaseBuffer = m_pTargetBuffer8 = reinterpret_cast<uint8_t *>(m_pFrameBuffer->GetBuffer());
-    m_pBuffer = m_pBaseBuffer + SCREEN_WIDTH * (SCREEN_HEIGHT / 2);
+    m_pBuffer = m_pBaseBuffer + DISPLAY_WIDTH * (DISPLAY_HEIGHT / 2);
+    m_pTargetBuffer32 = reinterpret_cast<uint32_t *>(m_pTargetBuffer8);
 
     std::memset(m_pBaseBuffer, ((m_border << 0x4u) | m_border), m_pFrameBuffer->GetSize());
 
@@ -122,6 +120,13 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
         }
     }
 
+    // Pre-compute the border fill word use to set 8 pixels (i.e. 4 bytes) at a time
+    for (int border = 0; border < 8; border++) {
+        for (int halfByte = 0; halfByte < 8; halfByte++) {
+            m_colour[border] = (m_colour[border] << 0x4u) | border;
+        }
+    }
+
     return true;
 }
 
@@ -135,12 +140,13 @@ void ZxDisplay::update(bool flash) {
     if (m_bDoubleBufferingEnabled) {
         if (m_bVSync) {
             // In VSync mode we swap the target frame each we refresh the screen
-            m_pFrameBuffer->SetVirtualOffset(0, m_bBufferSwapped ? SCREEN_HEIGHT : 0);
+            m_pFrameBuffer->SetVirtualOffset(0, m_bBufferSwapped ? DISPLAY_HEIGHT : 0);
             m_pFrameBuffer->WaitForVerticalSync();
             m_bBufferSwapped = !m_bBufferSwapped;
         } else {
+            m_pFrameBuffer->SetVirtualOffset(0, DISPLAY_HEIGHT);
             // In non-vsync mode we just copy from the hidden buffer to the base buffer
-            memcpy(m_pBaseBuffer, m_pBuffer, (SCREEN_WIDTH * SCREEN_HEIGHT) / 2 /* 2 pixels per byte */);
+            memcpy(m_pBaseBuffer, m_pBuffer, (DISPLAY_WIDTH * DISPLAY_HEIGHT) / 2 /* 2 pixels per byte */);
         }
     }
 
@@ -149,7 +155,7 @@ void ZxDisplay::update(bool flash) {
      * will always be the base buffer.
      */
     m_pTargetBuffer8 = (m_bDoubleBufferingEnabled && m_bBufferSwapped) ? m_pBuffer : m_pBaseBuffer;
-    auto pTargetBuffer32 = reinterpret_cast<uint32_t *>(m_pTargetBuffer8);
+    m_pTargetBuffer32 = reinterpret_cast<uint32_t *>(m_pTargetBuffer8);
 
     /*
      * Calculate the index into the frame buffer to perform fast translation of ZX Spectrum video memory to Raspberry Pi
@@ -165,28 +171,21 @@ void ZxDisplay::update(bool flash) {
 
     static uint8_t flashMask[] = {0x7Fu, 0xFFu};
 
-    // Always force a border repaint if double buffering is enabled.
-//    m_bBorderChanged = m_bDoubleBufferingEnabled;
-
-    // Draw the border
-//    if (m_bBorderChanged) {
-//        std::memset(pTargetBuffer8, ((m_border << 0x4u) | m_border), (SCREEN_WIDTH * SCREEN_HEIGHT) / 2 /* 2 pixels per byte */);
-//        m_bBorderChanged = false;
-//    }
+    updateBorder(m_border, Clock::getInstance().getTstatesPerScreenFrame());
 
     // The ZX Spectrum screen is made up of 3 blocks of 2048 (0x0800) bytes each
     for (unsigned int block = 0x0000; block < 0x1800; block += 0x0800) {
         for (unsigned int row = 0x0000; row < 0x0100; row += 0x0020) {
             for (unsigned int column = 0x0000; column < 0x0020; column++) {
                 uint8_t colour = m_pVideoMem[attribute++] & flashMask[flash];
-                pTargetBuffer32[bufIdx + column + 0x0000] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0000]];
-                pTargetBuffer32[bufIdx + column + 0x002C] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0100]];
-                pTargetBuffer32[bufIdx + column + 0x0058] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0200]];
-                pTargetBuffer32[bufIdx + column + 0x0084] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0300]];
-                pTargetBuffer32[bufIdx + column + 0x00B0] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0400]];
-                pTargetBuffer32[bufIdx + column + 0x00DC] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0500]];
-                pTargetBuffer32[bufIdx + column + 0x0108] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0600]];
-                pTargetBuffer32[bufIdx + column + 0x0134] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0700]];
+                m_pTargetBuffer32[bufIdx + column + 0x0000] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0000]];
+                m_pTargetBuffer32[bufIdx + column + 0x002C] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0100]];
+                m_pTargetBuffer32[bufIdx + column + 0x0058] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0200]];
+                m_pTargetBuffer32[bufIdx + column + 0x0084] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0300]];
+                m_pTargetBuffer32[bufIdx + column + 0x00B0] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0400]];
+                m_pTargetBuffer32[bufIdx + column + 0x00DC] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0500]];
+                m_pTargetBuffer32[bufIdx + column + 0x0108] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0600]];
+                m_pTargetBuffer32[bufIdx + column + 0x0134] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0700]];
             }
             bufIdx += 0x0160;
         }
@@ -196,52 +195,63 @@ void ZxDisplay::update(bool flash) {
         m_pZxView->draw(m_pTargetBuffer8);
     }
 
-    m_lastBorderChanged = 0;
+    m_lastBorderChange = 0;
 }
 
 
-void ZxDisplay::setBorder(uint8_t border) {
-
-    if (this->m_border != border) {
-        this->m_bBorderChanged = true;
-        this->m_border = border;
-    }
-}
-
-
+/*
+ * Each full line on the display takes 224 T-states to draw, where each line can be broken into the following
+ * substates:
+ *
+ *      128 T-states to draw the 256 screen pixels
+ *       24 T-states to draw the 48 right border pixels
+ *       48 T-states for the horizontal retrace
+ *       24 T-states to draw the 48 left border pixels
+ *
+ * Each complete ZX spectrum screen has 312 lines divided into:
+ *
+ *       16 lines to allow the electron beam to return to the top of the screen
+ *       48 lines for the top border
+ *      192 lines to draw the 192 screen pixels
+ *       56 lines for the bottom border (out of which only 48 lines are actually visible in the real machine)
+ */
 void ZxDisplay::updateBorder(uint8_t border, uint32_t tstates) {
 
-    uint8_t colour = (border << 0x4u) | border;
-
-    // FOR TESTING ONLY
-    for (unsigned int row = 0x0000; row < 0x0B00; row += 0x0B0) {
-        for (unsigned int column = 0x0000; column < 0x0008; column++) {
-            m_pTargetBuffer8[row + column] = colour;
-        }
+    if (m_border != border) {
+        CLogger::Get()->Write("[ZxDisplay]", LogDebug,
+                              "[BORDER] m_lastBorderChange: %5d, T-States: %5d, portFE: 0x%02X, colour: %-14s",
+                              m_lastBorderChange, tstates, border, m_borderColourName[border]);
     }
 
-    CLogger::Get()->Write(msgFromDisplay, LogDebug,
-                          "[update border] m_lastBorderChanged: %d, portFE: 0x%02X, T-States: %d",
-                          m_lastBorderChanged, border, tstates);
+    auto clock = Clock::getInstance();
 
-    if (m_lastBorderChanged < tstates) {
+    // Draw the border 8 pixels (e.g. 4 bytes) at a time
+    while (m_lastBorderChange < tstates) {
 
-        tstates &= 0X00FFFFFCu;
-        while (m_lastBorderChanged < tstates) {
-// TODO: work out the position to draw at based on the number of states elapsed.
-//            int position = m_states2border[m_lastBorderChanged];
-            m_lastBorderChanged += 4;
+        uint32_t offset = m_lastBorderChange % clock.getTstatesPerScreenFrame();
+        uint32_t row = offset / clock.getTstatesPerScreenLine();
+        uint32_t col = offset % clock.getTstatesPerScreenLine();
 
-//            if ((m_lastBorderChanged != 0XF0CAB0BAu) && (m_pTargetBuffer8[m_lastBorderChanged] != colour)) {
-//                // draw the border, 8 pixels (or 4 bytes) at a time
-//                for (int i = 0; i < 4; i++) {
-//                    m_pTargetBuffer8[m_lastBorderChanged + i] = colour;
-//                }
-//            }
+        //CLogger::Get()->Write("[ZxDisplay]", LogDebug,"[BORDER] row: %3d, column: %3d, border: 0x%02X, colour: %-14s", row, col, m_border, m_borderColourName[border]);
+
+        /*
+         * Determine whether the current T-state falls within the border area and paint it using the cached border
+         * fill colour if so.
+         */
+        if ((col < 24) || (col >= 152 && col < 176) || (row < 48) || (row >= 240 && row < 296)) {
+            /*
+             * When calculating the offset into the screen buffer we need to take into account the 48 T-states used to
+             * return the electron beam to the start of the line and divide both the column and the row by 4 (bytes)
+             * since we are drawing 8 pixels at a time.
+             */
+            uint32_t baseAddress = row * ((clock.getTstatesPerScreenLine() - 48) / 4) + (col / 4);
+            m_pTargetBuffer32[baseAddress] = m_colour[m_border];
         }
-
-        m_lastBorderChanged = tstates;
+        m_lastBorderChange += 4;
     }
+
+    m_lastBorderChange = tstates;
+    m_border = border;
 }
 
 

@@ -97,8 +97,8 @@ boolean CKernel::Initialize() {
          * anyone time.
          */
         m_pFrameBuffer = new CBcmFrameBuffer(
-                ZxDisplay::SCREEN_WIDTH, ZxDisplay::SCREEN_HEIGHT, ZxDisplay::COLOUR_DEPTH,
-                ZxDisplay::SCREEN_WIDTH, ZxDisplay::SCREEN_HEIGHT * 2, 0,
+                ZxDisplay::DISPLAY_WIDTH, ZxDisplay::DISPLAY_HEIGHT, ZxDisplay::COLOUR_DEPTH,
+                ZxDisplay::DISPLAY_WIDTH, ZxDisplay::DISPLAY_HEIGHT * 2, 0,
                 true);
         bOK = m_zxDisplay.Initialize(ViajeAlCentroDeLaTierra_scr, m_pFrameBuffer);
     }
@@ -194,7 +194,7 @@ void CKernel::handleAboutDialog() {
         m_ActLED.On();
 		m_Timer.usDelay(319488);
 
-//        m_pFrameBuffer->SetVirtualOffset(0, (toggleFrameBuffer = !toggleFrameBuffer) ? SCREEN_HEIGHT : 0);
+//        m_pFrameBuffer->SetVirtualOffset(0, (toggleFrameBuffer = !toggleFrameBuffer) ? DISPLAY_HEIGHT : 0);
     }
 
 	return ShutdownHalt;

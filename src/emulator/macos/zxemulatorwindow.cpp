@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 Jose Hernandez
+ * Copyright (c) 2020-2023 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -26,6 +26,8 @@
 #include <common/Z80emu.h>
 #include <common/aquaplane_sna.h>
 //#include <common/automania_sna.h>
+//#include <common/fpga48all_sna.h>
+//#include <common/test_2scrn_y_ay8192_sna.h>
 
 
 ZxEmulatorWindow::ZxEmulatorWindow() {
@@ -61,6 +63,8 @@ void ZxEmulatorWindow::initialise() {
     qDebug() << "Loading game in snapshot format";
     m_z80emu->loadSnapshot(aquaplane_sna);
 //    m_z80emu->loadSnapshot(automania_sna);
+//    m_z80emu->loadSnapshot(fpga48all_sna);
+//    m_z80emu->loadSnapshot(test_2scrn_y_ay8192_sna);
 
     Clock::getInstance().setSpectrumModel(m_model);
 

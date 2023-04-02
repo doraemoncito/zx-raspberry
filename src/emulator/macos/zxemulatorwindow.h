@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 Jose Hernandez
+ * Copyright (c) 2020-2023 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -33,7 +33,7 @@ Q_OBJECT
 
 public:
     ZxEmulatorWindow();
-    ~ZxEmulatorWindow();
+    ~ZxEmulatorWindow() override;
 
 private slots:
     void initialise();

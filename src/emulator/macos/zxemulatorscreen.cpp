@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 Jose Hernandez
+ * Copyright (c) 2020-2023 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -91,7 +91,6 @@ void ZxEmulatorScreen::paintEvent(QPaintEvent * /* event */) {
         flash = !flash;
     }
 
-    m_pZxDisplay->setBorder(m_z80emu->getBorder());
     m_pZxDisplay->update(flash);
 
     if (showDialog) {

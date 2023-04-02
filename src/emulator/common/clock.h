@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 Jose Hernandez
+ * Copyright (c) 2020-2023 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -48,6 +48,18 @@ public:
     }
 
 
+    [[nodiscard]] uint32_t getTstatesPerScreenFrame() const {
+
+        return m_spectrumModel->tStatesPerScreenFrame();
+    }
+
+
+    [[nodiscard]] uint32_t getTstatesPerScreenLine() const {
+
+        return m_spectrumModel->tStatesPerScreenLine();
+    }
+
+
     [[nodiscard]] uint32_t getTstates() const {
 
         return m_tstates;
@@ -67,7 +79,7 @@ public:
     }
 
 
-    long getFrames() const {
+    [[nodiscard]] long getFrames() const {
 
         return frames;
     }
@@ -80,7 +92,7 @@ public:
     }
 
 
-    long getAbsTstates() {
+    [[nodiscard]] uint32_t getAbsTstates() const {
 
         return frames * m_spectrumModel->tStatesPerScreenFrame() + m_tstates;
     }
@@ -90,7 +102,6 @@ public:
 
         frames = m_tstates = 0;
     }
-
 
 };
 

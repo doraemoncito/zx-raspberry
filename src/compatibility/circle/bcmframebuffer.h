@@ -99,13 +99,13 @@ public:
     };
 
 
-    u32 *GetBuffer() const {
+    [[nodiscard]] u32 *GetBuffer() const {
 
         return reinterpret_cast<u32 *>(buffer);
     };
 
 
-    u32 GetSize() const {
+    [[nodiscard]] u32 GetSize() const {
 
         return nWidth * nHeight;
     };

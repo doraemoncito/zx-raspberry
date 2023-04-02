@@ -112,7 +112,7 @@ private:
 
     // Tabla que contiene la dirección de pantalla del primer byte de cada
     // carácter en la columna cero.
-    uint32_t *scrAddr = new uint32_t[ZxDisplay::CANVAS_HEIGHT];
+    uint32_t *scrAddr = new uint32_t[ZxDisplay::SCREEN_HEIGHT];
 
     // Tabla de traslación entre t-states y la dirección de la pantalla del
     // Spectrum que se vuelca en ese t-state o -1 si no le corresponde ninguna.
