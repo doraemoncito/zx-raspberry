@@ -79,6 +79,10 @@ private:
 
     // T-state at which the border was last changed (though port 0xFEu) on screen.
     uint32_t m_lastBorderChange;
+    uint32_t m_firstBorderUpdate;
+    uint32_t m_lastBorderUpdate;
+
+    // Border colour cache. Each item in this array represents 8 pixels
     uint32_t m_colour[8] = { 0 };
 
     const uint16_t m_palette[16] = {

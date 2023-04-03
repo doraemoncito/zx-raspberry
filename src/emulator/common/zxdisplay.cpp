@@ -32,7 +32,7 @@ ZxDisplay::ZxDisplay()
         : m_pZxView(nullptr),
           m_pFrameBuffer(nullptr),
           m_pVideoMem(nullptr),
-          m_border(0xFu),
+          m_border(0x07u),
           m_bDoubleBufferingEnabled(false),
           m_bVSync(false),
           m_bBufferSwapped(false),
@@ -127,6 +127,11 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
         }
     }
 
+    //m_firstBorderUpdate = ((64 - screenGeometry.border().top()) * spectrumModel.tstatesLine) - screenGeometry.border().left() / 2;
+    m_firstBorderUpdate = ((64 - TOP_BORDER) * 224) - (LEFT_BORDER / 2);
+    //m_lastBorderUpdate = (255 + BOTTOM_BORDER) * Clock::getInstance().getTstatesPerScreenLine() + 128 + RIGHT_BORDER;
+    m_lastBorderUpdate = ((255 + BOTTOM_BORDER) * 224) + 128 + RIGHT_BORDER;
+
     return true;
 }
 
@@ -171,7 +176,8 @@ void ZxDisplay::update(bool flash) {
 
     static uint8_t flashMask[] = {0x7Fu, 0xFFu};
 
-    updateBorder(m_border, Clock::getInstance().getTstatesPerScreenFrame());
+    updateBorder(m_border, m_lastBorderUpdate);
+//    updateBorder(m_border, Clock::getInstance().getTstatesPerScreenFrame());
 
     // The ZX Spectrum screen is made up of 3 blocks of 2048 (0x0800) bytes each
     for (unsigned int block = 0x0000; block < 0x1800; block += 0x0800) {
@@ -195,6 +201,7 @@ void ZxDisplay::update(bool flash) {
         m_pZxView->draw(m_pTargetBuffer8);
     }
 
+//    m_lastBorderChange = m_firstBorderUpdate;
     m_lastBorderChange = 0;
 }
 
@@ -217,41 +224,43 @@ void ZxDisplay::update(bool flash) {
  */
 void ZxDisplay::updateBorder(uint8_t border, uint32_t tstates) {
 
-    if (m_border != border) {
+    if ((tstates >= m_lastBorderChange) && (m_lastBorderChange <= m_lastBorderUpdate)) {
+
         CLogger::Get()->Write("[ZxDisplay]", LogDebug,
-                              "[BORDER] m_lastBorderChange: %5d, T-States: %5d, portFE: 0x%02X, colour: %-14s",
-                              m_lastBorderChange, tstates, border, m_borderColourName[border]);
-    }
+                              "[BORDER] m_lastBorderChange: %5d, m_lastBorderUpdate: %5d, m_border: 0x%02X, %-14s  -->  T-states: %5d, border: 0x%02X, %-14s",
+                              m_lastBorderChange, m_lastBorderUpdate, m_border, m_borderColourName[m_border & 0x07],
+                              tstates, border, m_borderColourName[border & 0x07]);
 
-    auto clock = Clock::getInstance();
+        auto clock = Clock::getInstance();
 
-    // Draw the border 8 pixels (e.g. 4 bytes) at a time
-    while (m_lastBorderChange < tstates) {
+        // Draw the border 8 pixels (e.g. 4 bytes) at a time
+        while (m_lastBorderChange < tstates) {
 
-        uint32_t offset = m_lastBorderChange % clock.getTstatesPerScreenFrame();
-        uint32_t row = offset / clock.getTstatesPerScreenLine();
-        uint32_t col = offset % clock.getTstatesPerScreenLine();
+            uint32_t offset = (m_lastBorderChange - 176) % clock.getTstatesPerScreenFrame();
+            uint32_t row = offset / clock.getTstatesPerScreenLine();
+            uint32_t col = offset % clock.getTstatesPerScreenLine();
 
-        //CLogger::Get()->Write("[ZxDisplay]", LogDebug,"[BORDER] row: %3d, column: %3d, border: 0x%02X, colour: %-14s", row, col, m_border, m_borderColourName[border]);
+            //CLogger::Get()->Write("[ZxDisplay]", LogDebug,"[BORDER] row: %3d, column: %3d, border: 0x%02X, colour: %-14s", row, col, m_border, m_borderColourName[border]);
 
-        /*
-         * Determine whether the current T-state falls within the border area and paint it using the cached border
-         * fill colour if so.
-         */
-        if ((col < 24) || (col >= 152 && col < 176) || (row < 48) || (row >= 240 && row < 296)) {
             /*
-             * When calculating the offset into the screen buffer we need to take into account the 48 T-states used to
-             * return the electron beam to the start of the line and divide both the column and the row by 4 (bytes)
-             * since we are drawing 8 pixels at a time.
+             * Determine whether the current T-state falls within the border area and paint it using the cached border
+             * fill colour if so.
              */
-            uint32_t baseAddress = row * ((clock.getTstatesPerScreenLine() - 48) / 4) + (col / 4);
-            m_pTargetBuffer32[baseAddress] = m_colour[m_border];
+            if ((col < 24) || (col >= 152 && col < 176) || (row < 48) || (row >= 240 && row < 296)) {
+                /*
+                 * When calculating the offset into the screen buffer we need to take into account the 48 T-states used to
+                 * return the electron beam to the start of the line and divide both the column and the row by 4 (bytes)
+                 * since we are drawing 8 pixels at a time.
+                 */
+                uint32_t baseAddress = row * ((clock.getTstatesPerScreenLine() - 48) / 4) + (col / 4);
+                m_pTargetBuffer32[baseAddress] = m_colour[m_border];
+            }
+            m_lastBorderChange += 4;
         }
-        m_lastBorderChange += 4;
-    }
 
-    m_lastBorderChange = tstates;
-    m_border = border;
+        m_lastBorderChange = tstates;
+        m_border = border;
+    }
 }
 
 

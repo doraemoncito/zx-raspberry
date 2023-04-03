@@ -35,8 +35,8 @@
 //#include "fpga48all_sna.h"
 //#include "testkeys_sna.h"
 //#include "overscan_sna.h"
-#include "automania_sna.h"
-//#include "aquaplane_sna.h"
+//#include "automania_sna.h"
+#include "aquaplane_sna.h"
 #include "kernel.h"
 #include "Z80emu.h"
 #include "zxula.h"
@@ -209,10 +209,10 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
     z80emu->initialise(zx48k_rom, zx48k_rom_len);
 
     m_Logger.Write(FromKernel, LogNotice, "Loading game in SNA format");
-//    z80emu->loadSnapshot(aquaplane_sna);
+    z80emu->loadSnapshot(aquaplane_sna);
 //    z80emu->loadSnapshot(overscan_sna);
 //    z80emu->loadSnapshot(test_2scrn_y_ay8192_sna);
-    z80emu->loadSnapshot(automania_sna);
+//    z80emu->loadSnapshot(automania_sna);
 //    z80emu->loadSnapshot(testkeys_sna);
 //    z80emu->loadSnapshot(fpga48all_sna);
 

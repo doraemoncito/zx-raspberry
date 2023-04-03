@@ -40,7 +40,7 @@ public:
     CLogger() = default;
     static CLogger *Get() { return instance; };
     void Write(const char *pSource, TLogSeverity Severity, const char *pMessage, ...) {
-        char message[128];
+        char message[256];
         va_list argptr;
         va_start(argptr, pMessage);
         vsprintf(message, pMessage, argptr);
