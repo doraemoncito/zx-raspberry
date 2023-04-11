@@ -41,7 +41,7 @@ ZxEmulatorScreen::ZxEmulatorScreen(Z80emu *z80emu, ZxDisplay *pZxDisplay, QWidge
     antiAliased = false;
     setBackgroundRole(QPalette::Base);
     setAutoFillBackground(true);
-    m_pBcmFrameBuffer = new CBcmFrameBuffer(352, 296, 4);
+    m_pBcmFrameBuffer = new CBcmFrameBuffer(ZxDisplay::DISPLAY_WIDTH, ZxDisplay::DISPLAY_HEIGHT, ZxDisplay::COLOUR_DEPTH);
     m_pZxDisplay->Initialize(m_z80emu->getRam() + 0x4000, m_pBcmFrameBuffer);
     m_zxKeyboard = new ZxKeyboard();
 
@@ -86,7 +86,7 @@ void ZxEmulatorScreen::paintEvent(QPaintEvent * /* event */) {
     painter.setRenderHint(QPainter::Antialiasing, antiAliased);
     painter.save();
 
-    // The flash changes his state every 16 screen frames
+    // The flash changes state every 16 screen frames
     if (++frameCounter % 16 == 0) {
         flash = !flash;
     }

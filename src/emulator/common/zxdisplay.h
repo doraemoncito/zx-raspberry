@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2020-2023 Jose Hernandez
- * Copyright (c) 2017 José Luis Sanchez
  *
  * This file is part of ZxRaspberry.
  *
@@ -57,7 +56,8 @@ public:
     static const int SCREEN_WIDTH = 256;
     static const int DISPLAY_WIDTH = LEFT_BORDER + SCREEN_WIDTH + RIGHT_BORDER;
     static const int TOP_BORDER = 48;
-    static const int BOTTOM_BORDER = 56;        // 48 visible lines and 8 hidden lines
+//    static const int BOTTOM_BORDER = 56;        // 48 visible lines and 8 hidden lines
+    static const int BOTTOM_BORDER = 48;        // 48 visible lines and 8 hidden lines
     static const int SCREEN_HEIGHT = 192;
     static const int DISPLAY_HEIGHT = TOP_BORDER + SCREEN_HEIGHT + BOTTOM_BORDER;
     static const int COLOUR_DEPTH = 4;

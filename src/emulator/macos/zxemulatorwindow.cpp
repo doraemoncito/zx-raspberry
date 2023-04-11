@@ -25,6 +25,7 @@
 #include <zx48k_rom.h>
 #include <common/Z80emu.h>
 #include <common/aquaplane_sna.h>
+//#include <common/shock_sna.h>
 //#include <common/automania_sna.h>
 //#include <common/fpga48all_sna.h>
 //#include <common/test_2scrn_y_ay8192_sna.h>
@@ -62,6 +63,7 @@ void ZxEmulatorWindow::initialise() {
     m_z80emu->initialise(zx48k_rom, zx48k_rom_len);
     qDebug() << "Loading game in snapshot format";
     m_z80emu->loadSnapshot(aquaplane_sna);
+//    m_z80emu->loadSnapshot(shock_sna);
 //    m_z80emu->loadSnapshot(automania_sna);
 //    m_z80emu->loadSnapshot(fpga48all_sna);
 //    m_z80emu->loadSnapshot(test_2scrn_y_ay8192_sna);
@@ -79,8 +81,8 @@ void ZxEmulatorWindow::initialise() {
 void ZxEmulatorWindow::execute() {
 
     m_z80emu->execute(m_model->tStatesPerScreenFrame());
-    m_screen->repaint();
     Clock::getInstance().endFrame();
+    m_screen->repaint();
 }
 
 

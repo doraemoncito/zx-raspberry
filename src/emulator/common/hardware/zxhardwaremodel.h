@@ -25,7 +25,7 @@
 class ZxHardwareModel {
 
 public:
-    virtual ~ZxHardwareModel() {};
+    virtual ~ZxHardwareModel() = default;
 
     virtual std::string longModelName() = 0;
     virtual std::string shortModelName() = 0;
@@ -42,6 +42,9 @@ public:
 
     // Number of T-states until the first screen byte is reached
     virtual uint32_t tStatesToFirstScreenByte() = 0;
+
+    // Interrupt signal length in t-states
+    virtual uint32_t lengthINT() = 0;
 
 //protected:
 //    CodeModel codeModel; // Código de modelo

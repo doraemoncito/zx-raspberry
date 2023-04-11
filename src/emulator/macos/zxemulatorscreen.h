@@ -29,8 +29,6 @@ class CBcmFrameBuffer;
 class Z80emu;
 class ZxKeyboard;
 
-/* RENAME THIS CLASS TO EmulatorScreen */
-
 class ZxEmulatorScreen : public QWidget {
 Q_OBJECT
 

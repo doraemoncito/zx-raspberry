@@ -34,6 +34,8 @@ public:
     uint32_t tStatesPerScreenLine() override { return 224; };
     uint32_t upBorderHeight() override { return 64; };
     uint32_t tStatesToFirstScreenByte() override { return 14336; };
+    uint32_t lengthINT() override {return 32; };
+
 };
 
 

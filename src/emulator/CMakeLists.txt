@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.16.3)
 
 project(
         zxraspberry
-        VERSION 1.0.0
+        VERSION 0.0.1
         DESCRIPTION "Bare metal ZX Spectrum emulator for Raspberry Pi"
         HOMEPAGE_URL "https://github.com/doraemoncito/zx-raspberry"
         LANGUAGES C CXX
@@ -37,6 +37,8 @@ include_directories(BEFORE ../../include)
 
 add_executable(
         ${PROJECT_NAME}
+        common/zxspectrum.cpp
+        common/zxspectrum.h
         common/keyboard.h
         common/zxdisplay.h
         common/zxdisplay.cpp
@@ -61,8 +63,7 @@ add_executable(
         common/hardware/zxhardwaremodel.cpp
         common/hardware/zxhardwaremodel.h
         common/hardware/zxhardwaremodel48k.cpp
-        common/hardware/zxhardwaremodel48k.h
-        )
+        common/hardware/zxhardwaremodel48k.h)
 
 include_directories(BEFORE include)
 

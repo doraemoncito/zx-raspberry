@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2020-2023 Jose Hernandez
- * Copyright (c) 2017 José Luis Sanchez
  *
  * This file is part of ZxRaspberry.
  *
@@ -86,6 +85,7 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
 
     /*
      * Create a lookup table for draw the screen Faster Than Light :)
+     * This section was adapted from sample code by José Luis Sanchez of ZX bare emulator fame.
      *
      * The attribute byte format is as follows:
      *
@@ -177,7 +177,6 @@ void ZxDisplay::update(bool flash) {
     static uint8_t flashMask[] = {0x7Fu, 0xFFu};
 
     updateBorder(m_border, m_lastBorderUpdate);
-//    updateBorder(m_border, Clock::getInstance().getTstatesPerScreenFrame());
 
     // The ZX Spectrum screen is made up of 3 blocks of 2048 (0x0800) bytes each
     for (unsigned int block = 0x0000; block < 0x1800; block += 0x0800) {
@@ -201,8 +200,7 @@ void ZxDisplay::update(bool flash) {
         m_pZxView->draw(m_pTargetBuffer8);
     }
 
-//    m_lastBorderChange = m_firstBorderUpdate;
-    m_lastBorderChange = 0;
+    m_lastBorderChange = m_firstBorderUpdate;
 }
 
 
@@ -224,11 +222,19 @@ void ZxDisplay::update(bool flash) {
  */
 void ZxDisplay::updateBorder(uint8_t border, uint32_t tstates) {
 
+//    CLogger::Get()->Write("[BORDER #1]", LogDebug,"%5d -> %5d: %d (%s)",
+//                          m_lastBorderChange, tstates, m_border, m_borderColourName[m_border & 0x07],
+//                          tstates, border, m_borderColourName[border & 0x07]);
+
+    //    CLogger::Get()->Write("[ZxDisplay]", LogDebug,
+//                          "[BORDER] C: %5d, U: %5d, B: %d, %s --> T-states: %5d, B: %d, %s",
+//                          m_lastBorderChange, m_lastBorderUpdate, m_border, m_borderColourName[m_border & 0x07],
+//                          tstates, border, m_borderColourName[border & 0x07]);
+
     if ((tstates >= m_lastBorderChange) && (m_lastBorderChange <= m_lastBorderUpdate)) {
 
-        CLogger::Get()->Write("[ZxDisplay]", LogDebug,
-                              "[BORDER] m_lastBorderChange: %5d, m_lastBorderUpdate: %5d, m_border: 0x%02X, %-14s  -->  T-states: %5d, border: 0x%02X, %-14s",
-                              m_lastBorderChange, m_lastBorderUpdate, m_border, m_borderColourName[m_border & 0x07],
+        CLogger::Get()->Write("[BORDER #2]", LogDebug,"%5d -> %5d: %d (%s)",
+                              m_lastBorderChange, tstates, m_border, m_borderColourName[m_border & 0x07],
                               tstates, border, m_borderColourName[border & 0x07]);
 
         auto clock = Clock::getInstance();
@@ -258,9 +264,10 @@ void ZxDisplay::updateBorder(uint8_t border, uint32_t tstates) {
             m_lastBorderChange += 4;
         }
 
-        m_lastBorderChange = tstates;
-        m_border = border;
     }
+
+    m_lastBorderChange = tstates;
+    m_border = border;
 }
 
 

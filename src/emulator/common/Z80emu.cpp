@@ -235,11 +235,11 @@ void Z80emu::outPort(uint16_t port, uint8_t value) {
         if (m_border != (value & 0x07u)) {
             m_border = value & 0x07u;
             auto tstates = Clock::getInstance().getTstates();
-            m_pZxDisplay->updateBorder(m_border, tstates);
 //#ifdef DEBUG
-//            CLogger::Get()->Write(msgFromULA, LogDebug,"[PORT OUT] value 0x%02X --> port 0x%04X; Border colour: '0x%1X', T-States: %d",
-//                                  value, port, m_border, tstates);
+            CLogger::Get()->Write(msgFromULA, LogDebug,"[PORT OUT] value 0x%02X --> port 0x%04X; Border colour: '0x%1X', T-States: %d",
+                                  value, port, m_border, tstates);
 //#endif //DEBUG
+            m_pZxDisplay->updateBorder(m_border, tstates);
         }
 //
 //    } else {
@@ -259,10 +259,14 @@ void Z80emu::interruptHandlingTime(int32_t wstates) {
 }
 
 bool Z80emu::isActiveINT() {
-    // FIXME: do this properly
     static ZxHardwareModel48k model48K;
-	// Put here the logic needed to trigger an INT
-    return Clock::getInstance().getTstates() > model48K.tStatesPerScreenFrame();
+
+    int64_t tmp = Clock::getInstance().getTstates();
+
+    if (tmp >= model48K.tStatesPerScreenFrame())
+        tmp -= static_cast<int64_t>(model48K.tStatesPerScreenFrame());
+
+    return ((tmp >= 0) && (tmp < model48K.lengthINT()));
 }
 
 #ifdef WITH_EXEC_DONE
