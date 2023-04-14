@@ -56,8 +56,6 @@ Z80emu::Z80emu(ZxDisplay *pZxDisplay) :
 {
     m_pZ80Ram = reinterpret_cast<uint8_t *>(new uint32_t[0x4000]);
     m_pZ80Port = reinterpret_cast<uint8_t *>(new uint32_t[0x4000]);
-//    m_pZ80Ram = new uint8_t[0x10000];
-//    m_pZ80Port = new uint8_t[0x10000];
 
     Clock::getInstance().reset();
 

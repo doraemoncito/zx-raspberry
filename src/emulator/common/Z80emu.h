@@ -33,14 +33,12 @@ private:
     Z80 cpu;
     uint8_t *m_pZ80Ram;
     uint8_t *m_pZ80Port;
-//    uint8_t (*m_pZ80Ram)[0x10000];
-//    uint8_t (*m_pZ80Port)[0x10000];
-    bool finish{};
+    bool finish;
     uint8_t m_border;
     ZxDisplay *m_pZxDisplay;
 
 public:
-    Z80emu(ZxDisplay *pZxDisplay);
+    explicit Z80emu(ZxDisplay *pZxDisplay);
     ~Z80emu() override;
 
     uint8_t *getRam();
@@ -53,9 +51,9 @@ public:
     uint8_t inPort(uint16_t port) override;
     void outPort(uint16_t port, uint8_t value) override;
     void internalOutPort(uint16_t port, uint8_t value);
-    virtual void addressOnBus(uint16_t address, int32_t wstates) override;
+    void addressOnBus(uint16_t address, int32_t wstates) override;
     // Clocks needed for processing INT and NMI
-    virtual void interruptHandlingTime(int32_t wstates) override;
+    void interruptHandlingTime(int32_t wstates) override;
     bool isActiveINT() override;
 
 #ifdef WITH_BREAKPOINT_SUPPORT
@@ -71,12 +69,12 @@ public:
     void initialise(unsigned char const* base, size_t size);
     void loadSnapshot(const uint8_t* snapshot);
 
-    void execute(const uint32_t);
+    void execute(uint32_t);
 
     uint32_t getStates();
     void resetStates();
 
-    uint8_t getBorder() const {
+    [[nodiscard]] uint8_t getBorder() const {
         return m_border;
     }
 
