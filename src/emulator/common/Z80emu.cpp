@@ -55,34 +55,35 @@ Z80emu::Z80emu(ZxDisplay *pZxDisplay) :
     m_pZxDisplay(pZxDisplay)
 {
     m_pZ80Ram = reinterpret_cast<uint8_t *>(new uint32_t[0x4000]);
-    m_pZ80Port = reinterpret_cast<uint8_t *>(new uint32_t[0x4000]);
+    m_pZ80Ports = reinterpret_cast<uint8_t *>(new uint32_t[0x4000]);
 
     Clock::getInstance().reset();
 
     // FIXME: Implement keyboard support. For now, we'll turn the keyboard off until we implement it.
     // Bits are set to 0 for any key that is pressed and 1 for any key that is not pressed. Multiple key presses can be read simultaneously.
     // http://www.breakintoprogram.co.uk/computers/zx-spectrum/keyboard
-    m_pZ80Port[0xFEFE] = 0xFF;
-    m_pZ80Port[0xFDFE] = 0xFF;
-    m_pZ80Port[0xFBFE] = 0xFF;
-    m_pZ80Port[0xF7FE] = 0xFF;
-    m_pZ80Port[0xEFFE] = 0xFF;
-    m_pZ80Port[0xDFFE] = 0xFF;
-    m_pZ80Port[0xBFFE] = 0xFF;
-    m_pZ80Port[0x7FFE] = 0xFF;
-    m_pZ80Port[0x00FE] = 0xFF;
+    m_pZ80Ports[0xFEFE] = 0xFF;
+    m_pZ80Ports[0xFDFE] = 0xFF;
+    m_pZ80Ports[0xFBFE] = 0xFF;
+    m_pZ80Ports[0xF7FE] = 0xFF;
+    m_pZ80Ports[0xEFFE] = 0xFF;
+    m_pZ80Ports[0xDFFE] = 0xFF;
+    m_pZ80Ports[0xBFFE] = 0xFF;
+    m_pZ80Ports[0x7FFE] = 0xFF;
+    m_pZ80Ports[0x00FE] = 0xFF;
 
     m_contendedRamPage[0] = m_contendedIOPage[0] = false;
     m_contendedRamPage[1] = m_contendedIOPage[1] = true;
     m_contendedRamPage[2] = m_contendedIOPage[2] = false;
     m_contendedRamPage[3] = m_contendedIOPage[3] = false;
 
-    m_pDelayTstates = new ::uint8_t[model48K.tStatesPerScreenFrame() + 256];
-    //memset(m_pDelayTstates, (byte) 0x00);
+    uint32_t delayTableSize = model48K.tStatesPerScreenFrame() + 256;
+    m_pDelayTstates = new ::uint8_t[delayTableSize];
+    memset(m_pDelayTstates, 0, delayTableSize);
 
-    for (int idx = 14335; idx < 57247; idx += model48K.tStatesPerScreenLine()) {
-        for (int ndx = 0; ndx < 128; ndx += 8) {
-            int frame = idx + ndx;
+    for (uint32_t idx = 14335; idx < 57247; idx += model48K.tStatesPerScreenLine()) {
+        for (uint32_t ndx = 0; ndx < 128; ndx += 8) {
+            uint32_t frame = idx + ndx;
             m_pDelayTstates[frame++] = 6;
             m_pDelayTstates[frame++] = 5;
             m_pDelayTstates[frame++] = 4;
@@ -93,7 +94,6 @@ Z80emu::Z80emu(ZxDisplay *pZxDisplay) :
             m_pDelayTstates[frame++] = 0;
         }
     }
-
 }
 
 Z80emu::~Z80emu() = default;
@@ -117,38 +117,42 @@ void Z80emu::poke8(uint16_t address, uint8_t value) {
 }
 
 uint16_t Z80emu::peek16(uint16_t address) {
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    // Order matters, first read lsb, then read msb, don't "optimize"
-    uint8_t lsb = peek8(address);
-    uint8_t msb = peek8(address + 1);
-    return (msb << 0x08u) | lsb;
-#else
-    // 6 clocks to read word from RAM
-    Clock::getInstance().addTstates(6);
-    /* It is safe to read 16 bit words without explicit byte swapping if the
-     * byte order of the host machine matches that of the Zilog Z80 CPU we are
-     * emulating, in other words, little endian.  The 16 read and 16 bit write
-     * will cancel each other out.
-     */
-    return *reinterpret_cast<uint16_t *>(&m_pZ80Ram[address]);
-#endif
+    if (m_contendedRamPage[address >> 14]) {
+        Clock::getInstance().addTstates(m_pDelayTstates[Clock::getInstance().getTstates()] + 3);
+    } else {
+        Clock::getInstance().addTstates(3);
+    }
+
+    int lsb = m_pZ80Ram[address];
+    address = (address + 1) & 0xffff;
+
+    if (m_contendedRamPage[address >> 14]) {
+        Clock::getInstance().addTstates(m_pDelayTstates[Clock::getInstance().getTstates()] + 3);
+    } else {
+        Clock::getInstance().addTstates(3);
+    }
+
+    return ((m_pZ80Ram[address] << 8) | lsb);
 }
 
 void Z80emu::poke16(uint16_t address, RegisterPair word) {
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    // Order matters, first write lsb, then write msb, don't "optimize"
-    poke8(address, word.byte8.lo);
-    poke8(address + 1, word.byte8.hi);
-#else
-    // 6 clocks to write word to RAM
-    Clock::getInstance().addTstates(6);
-    /* It is safe to write 16 bit words without explicit byte swapping if the
-     * byte order of the host machine matches that of the Zilog Z80 CPU we are
-     * emulating, in other words, little endian.  The 16 read and 16 bit write
-     * will cancel each other out.
-     */
-    *reinterpret_cast<uint16_t *>(&m_pZ80Ram[address]) = word.word;
-#endif
+
+    if (m_contendedRamPage[address >> 14]) {
+        Clock::getInstance().addTstates(m_pDelayTstates[Clock::getInstance().getTstates()] + 3);
+    } else {
+        Clock::getInstance().addTstates(3);
+    }
+
+    m_pZ80Ram[address] = word.byte8.lo;
+    address = (address + 1) & 0xffff;
+
+    if (m_contendedRamPage[address >> 14]) {
+        Clock::getInstance().addTstates(m_pDelayTstates[Clock::getInstance().getTstates()] + 3);
+    } else {
+        Clock::getInstance().addTstates(3);
+    }
+
+    m_pZ80Ram[address] = word.byte8.hi;
 }
 
 uint8_t Z80emu::inPort(uint16_t port) {
@@ -171,35 +175,35 @@ uint8_t Z80emu::inPort(uint16_t port) {
         const uint8_t addressLine = (port >> 0x08u) & 0xFFu;
         if ((addressLine & (0xFFu - 0xF7u)) == 0x00u) {
             // 1 2 3 4 5
-            value &= m_pZ80Port[0xF7FEu];
+            value &= m_pZ80Ports[0xF7FEu];
         }
         if ((addressLine & (0xFFu - 0xFBu)) == 0x00u) {
             // Q W E R T
-            value &= m_pZ80Port[0xFBFEu];
+            value &= m_pZ80Ports[0xFBFEu];
         }
         if ((addressLine & (0xFFu - 0xFDu)) == 0x00u) {
             // A S D F G
-            value &= m_pZ80Port[0xFDFEu];
+            value &= m_pZ80Ports[0xFDFEu];
         }
         if ((addressLine & (0xFFu - 0xFEu)) == 0x00u) {
             // SHIFT Z X C V
-            value &= m_pZ80Port[0xFEFEu];
+            value &= m_pZ80Ports[0xFEFEu];
         };
         if ((addressLine & (0xFFu - 0xEFu)) == 0x00u) {
             // 0 9 8 7 6
-            value &= m_pZ80Port[0xEFFEu];
+            value &= m_pZ80Ports[0xEFFEu];
         }
         if ((addressLine & (0xFFu - 0xDFu)) == 0x00u) {
             // P O I U Y
-            value &= m_pZ80Port[0xDFFEu];
+            value &= m_pZ80Ports[0xDFFEu];
         }
         if ((addressLine & (0xFFu - 0xBFu)) == 0x00u) {
             // ENTER L K J H
-            value &= m_pZ80Port[0xBFFEu];
+            value &= m_pZ80Ports[0xBFFEu];
         }
         if ((addressLine & (0xFFu - 0x7Fu)) == 0x00u) {
             // SPACE-BREAK SYMBOL-SHIFT M N B
-            value &= m_pZ80Port[0x7FFEu];
+            value &= m_pZ80Ports[0x7FFEu];
         };
 
         return value;
@@ -207,10 +211,10 @@ uint8_t Z80emu::inPort(uint16_t port) {
         // No need to do anything here at this point
     } else {
         // Log the port number that the emulated ZX Spectrum software is trying to access
-        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT IN ] port 0x%04X <-- value 0x%02X", port, m_pZ80Port[port]);
+        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT IN ] port 0x%04X <-- value 0x%02X", port, m_pZ80Ports[port]);
     }
 
-    return m_pZ80Port[port];
+    return m_pZ80Ports[port];
 }
 
 /*
@@ -219,11 +223,11 @@ uint8_t Z80emu::inPort(uint16_t port) {
 // FIXME: Rename this to make clear that we are setting the value of the port as if we were reading from an external
 // device, i.e. the keyboard or joystick.  "setPort"or "internalSetPort" might be a better name for this method.
 void Z80emu::internalOutPort(uint16_t port, uint8_t value) {
-    if (m_pZ80Port[port] != value) {
+    if (m_pZ80Ports[port] != value) {
 #ifdef DEBUG
         CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT INT] value 0x%02X --> port 0x%04X", value, port);
 #endif //DEBUG
-        m_pZ80Port[port] = value;
+        m_pZ80Ports[port] = value;
     }
 }
 
@@ -252,11 +256,8 @@ void Z80emu::preIO(int port) {
     // If this is a contented IO page
     if (m_contendedIOPage[port >> 14]) {
         int delayTstates = m_pDelayTstates[Clock::getInstance().getTstates()] + 1;
-        CLogger::Get()->Write(msgFromULA, LogDebug, "(preIO) Adding %d delay T-states");
+//        CLogger::Get()->Write(msgFromULA, LogDebug, "(preIO) Adding %d delay T-states");
         Clock::getInstance().addTstates(delayTstates);
-//        if (Clock::getInstance().getTstates() >= nextEvent) {
-//            updateScreen(Clock::getInstance().getTstates());
-//        }
     } else {
         Clock::getInstance().addTstates(1);
     }
@@ -290,22 +291,22 @@ void Z80emu::outPort(uint16_t port, uint8_t value) {
          */
 
         // Update the border but only if the border colour has actually changed.
-        uint8_t maskedValue = value & 0x07u;
-        if (m_border != maskedValue) {
+        uint8_t border = value & 0x07u;
+        if (m_border != border) {
             auto tstates = Clock::getInstance().getTstates();
-            m_border = maskedValue;
-//#ifdef DEBUG
+            m_border = border;
+#ifdef DEBUG
             CLogger::Get()->Write(msgFromULA, LogDebug,
                                   "(OutPort) Frame: %5d; T-states: %5d; Port: 0x%04X; Value: %d (%s)",
                                   Clock::getInstance().getFrames(),
-                                  tstates, port, maskedValue, m_pZxDisplay->m_borderColourName[maskedValue]);
-//#endif //DEBUG
+                                  tstates, port, border, m_pZxDisplay->m_borderColourName[border]);
+#endif //DEBUG
             m_pZxDisplay->updateBorder(m_border, tstates);
         }
 
     }
 
-    m_pZ80Port[port] = value;
+    m_pZ80Ports[port] = value;
 }
 
 void Z80emu::addressOnBus(uint16_t /* address */, int32_t wstates) {
@@ -545,14 +546,4 @@ void Z80emu::execute(const uint32_t tstates) {
 
 uint8_t *Z80emu::getRam() {
     return m_pZ80Ram;
-}
-
-
-uint32_t Z80emu::getStates() {
-    return Clock::getInstance().getTstates();
-}
-
-
-void Z80emu::resetStates() {
-    Clock::getInstance().reset();
 }

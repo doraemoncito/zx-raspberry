@@ -28,9 +28,9 @@
 #include <QtDebug>
 
 
-unsigned int scale = 3;
+uint8_t scale = 3;
 bool flash = false;
-unsigned int frameCounter = 0;
+uint32_t frameCounter = 0;
 
 
 ZxEmulatorScreen::ZxEmulatorScreen(Z80emu *z80emu, ZxDisplay *pZxDisplay, QWidget *parent) :
@@ -58,8 +58,8 @@ ZxEmulatorScreen::~ZxEmulatorScreen() {
 QSize ZxEmulatorScreen::minimumSizeHint() const {
 
     return {
-            static_cast<int>(scale * ZxDisplay::DISPLAY_WIDTH) ,
-            static_cast<int>(scale * ZxDisplay::DISPLAY_HEIGHT)
+        static_cast<int>(scale * ZxDisplay::DISPLAY_WIDTH) ,
+        static_cast<int>(scale * ZxDisplay::DISPLAY_HEIGHT)
     };
 }
 

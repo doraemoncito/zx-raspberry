@@ -20,13 +20,14 @@
 #include "zxemulatorwindow.h"
 #include <QtWidgets>
 #include <QTimer>
+#include <utility>
 #include <common/clock.h>
 #include <common/hardware/zxhardwaremodel48k.h>
 #include <zx48k_rom.h>
 #include <common/Z80emu.h>
 
 
-ZxEmulatorWindow::ZxEmulatorWindow(QString programFile) : m_programFile(programFile) {
+ZxEmulatorWindow::ZxEmulatorWindow(QString programFile) : m_programFile(std::move(programFile)) {
 
     qDebug() << "Program to run: " << ((m_programFile != nullptr) ? m_programFile : "NONE");
 

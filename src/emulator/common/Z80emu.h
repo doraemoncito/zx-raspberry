@@ -32,7 +32,7 @@ class Z80emu : public Z80operations
 private:
     Z80 cpu;
     uint8_t *m_pZ80Ram;
-    uint8_t *m_pZ80Port;
+    uint8_t *m_pZ80Ports;
     bool finish;
     uint8_t m_border;
     ZxDisplay *m_pZxDisplay;
@@ -70,9 +70,6 @@ public:
     void loadSnapshot(const uint8_t* snapshot);
 
     void execute(uint32_t);
-
-    uint32_t getStates();
-    void resetStates();
 
     [[nodiscard]] uint8_t getBorder() const {
         return m_border;

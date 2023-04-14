@@ -79,7 +79,7 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
     m_pTargetBuffer32 = reinterpret_cast<uint32_t *>(m_pTargetBuffer8);
 
     // Initialise the screen
-    std::memset(m_pBaseBuffer, ((m_border << 0x04u) | m_border), m_pFrameBuffer->GetSize());
+    std::memset(m_pBaseBuffer, static_cast<int>((m_border << 0x04u) | m_border), m_pFrameBuffer->GetSize());
 
     /*
      * Create a pixel value lookup table for draw the screen Faster Than Light :)
@@ -157,6 +157,9 @@ void ZxDisplay::update(bool flash) {
     assert(m_pBuffer != nullptr);
     assert(m_pVideoMem != nullptr);
 
+//    CLogger::Get()->Write("[Display]", LogDebug,"(update display) Frame: %5d; T-states: %5d",
+//                          Clock::getInstance().getFrames(), Clock::getInstance().getTstates());
+
     if (m_bDoubleBufferingEnabled) {
         if (m_bVSync) {
             // In VSync mode we swap the target frame each we refresh the screen
@@ -194,18 +197,13 @@ void ZxDisplay::update(bool flash) {
     updateBorder(m_border, m_lastBorderUpdate);
 
     // The ZX Spectrum screen is made up of 3 blocks of 2048 (0x0800) bytes each
-    for (unsigned int block = 0x0000; block < 0x1800; block += 0x0800) {
-        for (unsigned int row = 0x0000; row < 0x0100; row += 0x0020) {
-            for (unsigned int column = 0x0000; column < 0x0020; column++) {
+    for (uint32_t block = 0x0000; block < 0x1800; block += 0x0800) {
+        for (uint32_t row = 0x0000; row < 0x0100; row += 0x0020) {
+            for (uint32_t column = 0x0000; column < 0x0020; column++) {
                 uint8_t colour = m_pVideoMem[attribute++] & flashMask[flash];
-                m_pTargetBuffer32[bufIdx + column + 0x0000] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0000]];
-                m_pTargetBuffer32[bufIdx + column + 0x002C] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0100]];
-                m_pTargetBuffer32[bufIdx + column + 0x0058] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0200]];
-                m_pTargetBuffer32[bufIdx + column + 0x0084] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0300]];
-                m_pTargetBuffer32[bufIdx + column + 0x00B0] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0400]];
-                m_pTargetBuffer32[bufIdx + column + 0x00DC] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0500]];
-                m_pTargetBuffer32[bufIdx + column + 0x0108] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0600]];
-                m_pTargetBuffer32[bufIdx + column + 0x0134] = *m_pScrTable[colour][m_pVideoMem[block + row + column + 0x0700]];
+                for (uint32_t line = 0; line < 8; line++) {
+                    m_pTargetBuffer32[bufIdx + column + line * 0x2C] = *m_pScrTable[colour][m_pVideoMem[block + row + column + line * 0x0100]];
+                }
             }
             bufIdx += 0x0160;
         }
