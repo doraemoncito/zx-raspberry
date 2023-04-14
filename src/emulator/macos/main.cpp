@@ -17,6 +17,7 @@
  * along with ZxRaspberry.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <QApplication>
+#include <QCommandLineParser>
 #include "zxemulatorwindow.h"
 #include "common/Z80emu.h"
 
@@ -24,7 +25,22 @@
 int main(int argc, char *argv[]) {
 
     QApplication application(argc, argv);
-    ZxEmulatorWindow emulatorWindow;
-    emulatorWindow.show();
+    QApplication::setApplicationName("ZX Raspberry");
+    QApplication::setApplicationVersion("0.0.1");
+
+    // https://doc.qt.io/qt-6/qcommandlineparser.html
+    QCommandLineParser parser;
+    parser.setApplicationDescription("ZX Raspberry - A bare metal ZX Spectrum emulator");
+    parser.addHelpOption();
+    parser.addVersionOption();
+    parser.addPositionalArgument("program-file", QCoreApplication::translate("program-file", "Program file to run."));
+    parser.process(application);
+    const QStringList args = parser.positionalArguments();
+    // Position 0, if present,  should contain the full path to the ZX Spectrum program to run
+    const QString &programFile = args.value(0);
+
+    auto *emulatorWindow = new ZxEmulatorWindow(programFile);
+    emulatorWindow->show();
+
     return QApplication::exec();
 }

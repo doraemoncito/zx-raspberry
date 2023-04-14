@@ -42,7 +42,7 @@ ZxEmulatorScreen::ZxEmulatorScreen(Z80emu *z80emu, ZxDisplay *pZxDisplay, QWidge
     setBackgroundRole(QPalette::Base);
     setAutoFillBackground(true);
     m_pBcmFrameBuffer = new CBcmFrameBuffer(ZxDisplay::DISPLAY_WIDTH, ZxDisplay::DISPLAY_HEIGHT, ZxDisplay::COLOUR_DEPTH);
-    m_pZxDisplay->Initialize(m_z80emu->getRam() + 0x4000, m_pBcmFrameBuffer);
+    m_pZxDisplay->Initialize(&m_z80emu->getRam()[0x4000], m_pBcmFrameBuffer);
     m_zxKeyboard = new ZxKeyboard();
 
     // Set the focus on this widget so that we can get keyboard events
@@ -57,13 +57,19 @@ ZxEmulatorScreen::~ZxEmulatorScreen() {
 
 QSize ZxEmulatorScreen::minimumSizeHint() const {
 
-    return {static_cast<int>(scale * 352) /* 48 + 256 + 48 */, static_cast<int>(scale * 296) /*(48 + 192 + 56)*/};
+    return {
+            static_cast<int>(scale * ZxDisplay::DISPLAY_WIDTH) ,
+            static_cast<int>(scale * ZxDisplay::DISPLAY_HEIGHT)
+    };
 }
 
 
 QSize ZxEmulatorScreen::sizeHint() const {
 
-    return {static_cast<int>(scale * 352) /* 48 + 256 + 48 */, static_cast<int>(scale * 296) /*(48 + 192 + 56)*/};
+    return {
+        static_cast<int>(scale * ZxDisplay::DISPLAY_WIDTH) ,
+        static_cast<int>(scale * ZxDisplay::DISPLAY_HEIGHT)
+    };
 }
 
 

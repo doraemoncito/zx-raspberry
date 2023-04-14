@@ -31,8 +31,10 @@ class Z80emu : public Z80operations
 {
 private:
     Z80 cpu;
-    uint8_t z80Ram[0x10000]{};
-    uint8_t z80Ports[0x10000]{};
+    uint8_t *m_pZ80Ram;
+    uint8_t *m_pZ80Port;
+//    uint8_t (*m_pZ80Ram)[0x10000];
+//    uint8_t (*m_pZ80Port)[0x10000];
     bool finish{};
     uint8_t m_border;
     ZxDisplay *m_pZxDisplay;
@@ -77,6 +79,13 @@ public:
     uint8_t getBorder() const {
         return m_border;
     }
+
+private:
+    void preIO(int port);
+
+    uint8_t *m_pDelayTstates;
+    bool m_contendedRamPage[4];
+    bool m_contendedIOPage[4];
 
 };
 

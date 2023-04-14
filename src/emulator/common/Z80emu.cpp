@@ -43,9 +43,10 @@ struct imemstream: virtual membuf, std::istream {
 };
 
 using namespace std;
+static ZxHardwareModel48k model48K;
 
 
-static const char msgFromULA[] = "ULA";
+static const char msgFromULA[] = "[ULA    ]";
 
 
 Z80emu::Z80emu(ZxDisplay *pZxDisplay) :
@@ -53,20 +54,48 @@ Z80emu::Z80emu(ZxDisplay *pZxDisplay) :
     m_border(0x07u),
     m_pZxDisplay(pZxDisplay)
 {
+    m_pZ80Ram = reinterpret_cast<uint8_t *>(new uint32_t[0x4000]);
+    m_pZ80Port = reinterpret_cast<uint8_t *>(new uint32_t[0x4000]);
+//    m_pZ80Ram = new uint8_t[0x10000];
+//    m_pZ80Port = new uint8_t[0x10000];
+
     Clock::getInstance().reset();
 
     // FIXME: Implement keyboard support. For now, we'll turn the keyboard off until we implement it.
     // Bits are set to 0 for any key that is pressed and 1 for any key that is not pressed. Multiple key presses can be read simultaneously.
     // http://www.breakintoprogram.co.uk/computers/zx-spectrum/keyboard
-    z80Ports[0xFEFE] = 0xFF;
-    z80Ports[0xFDFE] = 0xFF;
-    z80Ports[0xFBFE] = 0xFF;
-    z80Ports[0xF7FE] = 0xFF;
-    z80Ports[0xEFFE] = 0xFF;
-    z80Ports[0xDFFE] = 0xFF;
-    z80Ports[0xBFFE] = 0xFF;
-    z80Ports[0x7FFE] = 0xFF;
-    z80Ports[0x00FE] = 0xFF;
+    m_pZ80Port[0xFEFE] = 0xFF;
+    m_pZ80Port[0xFDFE] = 0xFF;
+    m_pZ80Port[0xFBFE] = 0xFF;
+    m_pZ80Port[0xF7FE] = 0xFF;
+    m_pZ80Port[0xEFFE] = 0xFF;
+    m_pZ80Port[0xDFFE] = 0xFF;
+    m_pZ80Port[0xBFFE] = 0xFF;
+    m_pZ80Port[0x7FFE] = 0xFF;
+    m_pZ80Port[0x00FE] = 0xFF;
+
+    m_contendedRamPage[0] = m_contendedIOPage[0] = false;
+    m_contendedRamPage[1] = m_contendedIOPage[1] = true;
+    m_contendedRamPage[2] = m_contendedIOPage[2] = false;
+    m_contendedRamPage[3] = m_contendedIOPage[3] = false;
+
+    m_pDelayTstates = new ::uint8_t[model48K.tStatesPerScreenFrame() + 256];
+    //memset(m_pDelayTstates, (byte) 0x00);
+
+    for (int idx = 14335; idx < 57247; idx += model48K.tStatesPerScreenLine()) {
+        for (int ndx = 0; ndx < 128; ndx += 8) {
+            int frame = idx + ndx;
+            m_pDelayTstates[frame++] = 6;
+            m_pDelayTstates[frame++] = 5;
+            m_pDelayTstates[frame++] = 4;
+            m_pDelayTstates[frame++] = 3;
+            m_pDelayTstates[frame++] = 2;
+            m_pDelayTstates[frame++] = 1;
+            m_pDelayTstates[frame++] = 0;
+            m_pDelayTstates[frame++] = 0;
+        }
+    }
+
 }
 
 Z80emu::~Z80emu() = default;
@@ -74,19 +103,19 @@ Z80emu::~Z80emu() = default;
 uint8_t Z80emu::fetchOpcode(uint16_t address) {
     // 3 clocks to fetch opcode from RAM and 1 execution clock = 4 t-states
     Clock::getInstance().addTstates(4);
-    return z80Ram[address];
+    return m_pZ80Ram[address];
 }
 
 uint8_t Z80emu::peek8(uint16_t address) {
     // 3 clocks for read byte from RAM
     Clock::getInstance().addTstates(3);
-    return z80Ram[address];
+    return m_pZ80Ram[address];
 }
 
 void Z80emu::poke8(uint16_t address, uint8_t value) {
     // 3 clocks for write byte to RAM
     Clock::getInstance().addTstates(3);
-    z80Ram[address] = value;
+    m_pZ80Ram[address] = value;
 }
 
 uint16_t Z80emu::peek16(uint16_t address) {
@@ -103,7 +132,7 @@ uint16_t Z80emu::peek16(uint16_t address) {
      * emulating, in other words, little endian.  The 16 read and 16 bit write
      * will cancel each other out.
      */
-    return *reinterpret_cast<uint16_t *>(&z80Ram[address]);
+    return *reinterpret_cast<uint16_t *>(&m_pZ80Ram[address]);
 #endif
 }
 
@@ -120,7 +149,7 @@ void Z80emu::poke16(uint16_t address, RegisterPair word) {
      * emulating, in other words, little endian.  The 16 read and 16 bit write
      * will cancel each other out.
      */
-    *reinterpret_cast<uint16_t *>(&z80Ram[address]) = word.word;
+    *reinterpret_cast<uint16_t *>(&m_pZ80Ram[address]) = word.word;
 #endif
 }
 
@@ -144,35 +173,35 @@ uint8_t Z80emu::inPort(uint16_t port) {
         const uint8_t addressLine = (port >> 0x08u) & 0xFFu;
         if ((addressLine & (0xFFu - 0xF7u)) == 0x00u) {
             // 1 2 3 4 5
-            value &= z80Ports[0xF7FEu];
+            value &= m_pZ80Port[0xF7FEu];
         }
         if ((addressLine & (0xFFu - 0xFBu)) == 0x00u) {
             // Q W E R T
-            value &= z80Ports[0xFBFEu];
+            value &= m_pZ80Port[0xFBFEu];
         }
         if ((addressLine & (0xFFu - 0xFDu)) == 0x00u) {
             // A S D F G
-            value &= z80Ports[0xFDFEu];
+            value &= m_pZ80Port[0xFDFEu];
         }
         if ((addressLine & (0xFFu - 0xFEu)) == 0x00u) {
             // SHIFT Z X C V
-            value &= z80Ports[0xFEFEu];
+            value &= m_pZ80Port[0xFEFEu];
         };
         if ((addressLine & (0xFFu - 0xEFu)) == 0x00u) {
             // 0 9 8 7 6
-            value &= z80Ports[0xEFFEu];
+            value &= m_pZ80Port[0xEFFEu];
         }
         if ((addressLine & (0xFFu - 0xDFu)) == 0x00u) {
             // P O I U Y
-            value &= z80Ports[0xDFFEu];
+            value &= m_pZ80Port[0xDFFEu];
         }
         if ((addressLine & (0xFFu - 0xBFu)) == 0x00u) {
             // ENTER L K J H
-            value &= z80Ports[0xBFFEu];
+            value &= m_pZ80Port[0xBFFEu];
         }
         if ((addressLine & (0xFFu - 0x7Fu)) == 0x00u) {
             // SPACE-BREAK SYMBOL-SHIFT M N B
-            value &= z80Ports[0x7FFEu];
+            value &= m_pZ80Port[0x7FFEu];
         };
 
         return value;
@@ -180,10 +209,10 @@ uint8_t Z80emu::inPort(uint16_t port) {
         // No need to do anything here at this point
     } else {
         // Log the port number that the emulated ZX Spectrum software is trying to access
-        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT IN ] port 0x%04X <-- value 0x%02X", port, z80Ports[port]);
+        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT IN ] port 0x%04X <-- value 0x%02X", port, m_pZ80Port[port]);
     }
 
-    return z80Ports[port];
+    return m_pZ80Port[port];
 }
 
 /*
@@ -192,30 +221,61 @@ uint8_t Z80emu::inPort(uint16_t port) {
 // FIXME: Rename this to make clear that we are setting the value of the port as if we were reading from an external
 // device, i.e. the keyboard or joystick.  "setPort"or "internalSetPort" might be a better name for this method.
 void Z80emu::internalOutPort(uint16_t port, uint8_t value) {
-    if (z80Ports[port] != value) {
+    if (m_pZ80Port[port] != value) {
 #ifdef DEBUG
         CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT INT] value 0x%02X --> port 0x%04X", value, port);
 #endif //DEBUG
-        z80Ports[port] = value;
+        m_pZ80Port[port] = value;
+    }
+}
+
+
+/*
+ * Las operaciones de I/O se producen entre los ciclos T3 y T4 de la CPU,
+ * y justo ahí es donde podemos encontrar la contención en los accesos. Los
+ * ciclos de contención son exactamente iguales a los de la memoria, con los
+ * siguientes condicionantes dependiendo del estado del bit A0 y de si el
+ * puerto accedido se encuentra entre las direcciones 0x4000-0x7FFF:
+ *
+ * High byte in 0x40 (0xc0) to 0x7f (0xff)?     Low bit  Contention pattern
+ *                                      No      Reset    N:1, C:3
+ *                                      No      Set      N:1, N:3
+ *                                      Yes     Reset    C:1, C:3
+ *                                      Yes     Set      C:1, C:1, C:1, C:1
+ *
+ * La columna 'Contention Pattern' se lee 'N:x', no contención x ciclos
+ * 'C:n' se lee contención seguido de n ciclos sin contención.
+ * Así pues se necesitan dos rutinas, la que añade el t-estado inicial
+ * con sus contenciones cuando procede y la que añade los 3 estados finales
+ * con la contención correspondiente.
+ */
+void Z80emu::preIO(int port) {
+
+    // If this is a contented IO page
+    if (m_contendedIOPage[port >> 14]) {
+        int delayTstates = m_pDelayTstates[Clock::getInstance().getTstates()] + 1;
+        CLogger::Get()->Write(msgFromULA, LogDebug, "(preIO) Adding %d delay T-states");
+        Clock::getInstance().addTstates(delayTstates);
+//        if (Clock::getInstance().getTstates() >= nextEvent) {
+//            updateScreen(Clock::getInstance().getTstates());
+//        }
+    } else {
+        Clock::getInstance().addTstates(1);
     }
 }
 
 
 void Z80emu::outPort(uint16_t port, uint8_t value) {
+    preIO(port);
+
     // 4 clocks for write byte to bus
     Clock::getInstance().addTstates(4);
 
     /* NOTE: All even ports on the ZX spectrum are allocated to the ULA but to avoid problems with other I/O devices
-     * only Port 0xFE should be used.
-     *
-     * Define a preprocessor constant named USE_ALL_EVEN_OUTPUT_PORTS to send output to all even ports.  Otherwise, we
-     * ignore "OUT" instructions sent to ports other that 0x00FEu.
+     * only Port 0xFE should be used.  We do however need to check since many programs will write to any even port to
+     * do things like change the border, etc...
      */
-#ifdef USE_ALL_EVEN_OUTPUT_PORTS
-    if (!(port & 0x0001u)) {
-#else
-    if ((port & 0x00FFu) == 0x00FEu) {
-#endif
+    if ((port & 0x0001) == 0) {
         /* OUT to port xxFE (the high byte is ignored) will set the border colour using the lowest three bits
          * {d2, d1, d0}, drive the MIC socket with d3 and the EAR socket (loudspeaker) with d4. d5 to d7 are not used.
          * The EAR and MIC sockets are connected only by resistors, so activating one activates the other; the EAR is
@@ -231,22 +291,23 @@ void Z80emu::outPort(uint16_t port, uint8_t value) {
          *     +-------------------------------+
          */
 
-        // Has the border value changed?
-        if (m_border != (value & 0x07u)) {
-            m_border = value & 0x07u;
+        // Update the border but only if the border colour has actually changed.
+        uint8_t maskedValue = value & 0x07u;
+        if (m_border != maskedValue) {
             auto tstates = Clock::getInstance().getTstates();
+            m_border = maskedValue;
 //#ifdef DEBUG
-            CLogger::Get()->Write(msgFromULA, LogDebug,"[PORT OUT] value 0x%02X --> port 0x%04X; Border colour: '0x%1X', T-States: %d",
-                                  value, port, m_border, tstates);
+            CLogger::Get()->Write(msgFromULA, LogDebug,
+                                  "(OutPort) Frame: %5d; T-states: %5d; Port: 0x%04X; Value: %d (%s)",
+                                  Clock::getInstance().getFrames(),
+                                  tstates, port, maskedValue, m_pZxDisplay->m_borderColourName[maskedValue]);
 //#endif //DEBUG
             m_pZxDisplay->updateBorder(m_border, tstates);
         }
-//
-//    } else {
-//        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT OUT] value 0x%02X --> port 0x%04X", value, port);
+
     }
 
-    z80Ports[port] = value;
+    m_pZ80Port[port] = value;
 }
 
 void Z80emu::addressOnBus(uint16_t /* address */, int32_t wstates) {
@@ -259,8 +320,6 @@ void Z80emu::interruptHandlingTime(int32_t wstates) {
 }
 
 bool Z80emu::isActiveINT() {
-    static ZxHardwareModel48k model48K;
-
     int64_t tmp = Clock::getInstance().getTstates();
 
     if (tmp >= model48K.tStatesPerScreenFrame())
@@ -294,8 +353,8 @@ uint8_t Z80emu::breakpoint(uint16_t /* address */, uint8_t opcode) {
         {
             uint16_t strAddr = cpu.getRegDE();
             uint16_t endAddr = cpu.getRegDE();
-            while (z80Ram[endAddr++] != '$');
-            std::string message((const char *) &z80Ram[strAddr], endAddr - strAddr - 1);
+            while (m_pZ80Ram[endAddr++] != '$');
+            std::string message((const char *) &m_pZ80Ram[strAddr], endAddr - strAddr - 1);
             cout << message;
             cout.flush();
             break;
@@ -322,16 +381,16 @@ void Z80emu::runTest(std::ifstream* f) {
     size = f->tellg();
     cout << "Test size: " << size << endl;
     f->seekg(0, ios::beg);
-    f->read((char *) &z80Ram[0x100], size);
+    f->read((char *) &m_pZ80Ram[0x100], size);
     f->close();
 
     cpu.reset();
     finish = false;
 
-    z80Ram[0] = (uint8_t) 0xC3;
-    z80Ram[1] = 0x00;
-    z80Ram[2] = 0x01; // JP 0x100 CP/M TPA
-    z80Ram[5] = (uint8_t) 0xC9; // Return from BDOS call
+    m_pZ80Ram[0] = (uint8_t) 0xC3;
+    m_pZ80Ram[1] = 0x00;
+    m_pZ80Ram[2] = 0x01; // JP 0x100 CP/M TPA
+    m_pZ80Ram[5] = (uint8_t) 0xC9; // Return from BDOS call
 
 #ifdef WITH_BREAKPOINT_SUPPORT
     cpu.setBreakpoint(0x0005, true);
@@ -344,7 +403,7 @@ void Z80emu::runTest(std::ifstream* f) {
 
 void Z80emu::initialise(unsigned char const* base, size_t size) {
 
-    memcpy(&z80Ram[0x0000],  base,  size);
+    memcpy(&m_pZ80Ram[0x0000],  base,  size);
     cpu.reset();
 }
 
@@ -385,8 +444,10 @@ void Z80emu::initialise(unsigned char const* base, size_t size) {
 //
 void Z80emu::loadSnapshot(const uint8_t* snapshot) {
 
-    // Skip the first 27 bytes of the snapshot to load the RAM dump into the last three 16K blocks of ZX spectrum memory
-    memcpy(&z80Ram[0x4000],  &snapshot[0x1B],  0xC000);
+    /* Skip the first 27 (0x1B) bytes of the snapshot to load the RAM dump into the last three 16K blocks of
+     * ZX Spectrum memory.
+     */
+    memcpy(&m_pZ80Ram[0x4000],&snapshot[0x1B],  0xC000);
 
     cpu.reset();
 
@@ -445,6 +506,8 @@ void Z80emu::loadSnapshot(const uint8_t* snapshot) {
     }
 
     // TODO: handle the border colour at location snapshot[0x1A]
+    m_border = snapshot[0x1A];
+    m_pZxDisplay->updateBorder(m_border, 0);
 
     //  Alternative way of generating a RETN instruction
     //  cpu.decodeED(0x7Du); // Issue a RETN instruction to pop the return address from the stack
@@ -453,13 +516,13 @@ void Z80emu::loadSnapshot(const uint8_t* snapshot) {
 
 // void Z80emu::initialise(unsigned char const* base, size_t size) {
 
-//     memcpy(&z80Ram[0x0100],  base,  size);
+//     memcpy(&m_pZ80Ram[0x0100],  base,  size);
 //     cpu.reset();
 
-//     z80Ram[0] = (uint8_t) 0xC3;
-//     z80Ram[1] = 0x00;
-//     z80Ram[2] = 0x01; // JP 0x100 CP/M TPA
-//     z80Ram[5] = (uint8_t) 0xC9; // Return from BDOS call
+//     m_pZ80Ram[0] = (uint8_t) 0xC3;
+//     m_pZ80Ram[1] = 0x00;
+//     m_pZ80Ram[2] = 0x01; // JP 0x100 CP/M TPA
+//     m_pZ80Ram[5] = (uint8_t) 0xC9; // Return from BDOS call
 
 //     cpu.setBreakpoint(0x0005, true);
 // }
@@ -483,7 +546,7 @@ void Z80emu::execute(const uint32_t tstates) {
 
 
 uint8_t *Z80emu::getRam() {
-    return z80Ram;
+    return m_pZ80Ram;
 }
 
 

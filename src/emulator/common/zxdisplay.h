@@ -51,23 +51,23 @@ public:
      * - <http://www.zxdesign.info/vidparam.shtml>
      * - <http://www.breakintoprogram.co.uk/computers/zx-spectrum/screen-memory-layout>
      */
-    static const int LEFT_BORDER = 48;
-    static const int RIGHT_BORDER = 48;
-    static const int SCREEN_WIDTH = 256;
-    static const int DISPLAY_WIDTH = LEFT_BORDER + SCREEN_WIDTH + RIGHT_BORDER;
-    static const int TOP_BORDER = 48;
-//    static const int BOTTOM_BORDER = 56;        // 48 visible lines and 8 hidden lines
-    static const int BOTTOM_BORDER = 48;        // 48 visible lines and 8 hidden lines
-    static const int SCREEN_HEIGHT = 192;
-    static const int DISPLAY_HEIGHT = TOP_BORDER + SCREEN_HEIGHT + BOTTOM_BORDER;
-    static const int COLOUR_DEPTH = 4;
+    static const uint32_t LEFT_BORDER = 48;
+    static const uint32_t RIGHT_BORDER = 48;
+    static const uint32_t SCREEN_WIDTH = 256;
+    static const uint32_t DISPLAY_WIDTH = LEFT_BORDER + SCREEN_WIDTH + RIGHT_BORDER;
+    static const uint32_t TOP_BORDER = 48;
+    // The bottom border has 56 lines, out of which 48 lines are visible and 8 lines are hidden.
+    static const uint32_t BOTTOM_BORDER = 56;
+    static const uint32_t SCREEN_HEIGHT = 192;
+    static const uint32_t DISPLAY_HEIGHT = TOP_BORDER + SCREEN_HEIGHT + BOTTOM_BORDER;
+    static const uint32_t COLOUR_DEPTH = 4;
 
 private:
     ZxView *m_pZxView;
     CBcmFrameBuffer *m_pFrameBuffer;
     uint32_t (*m_pScrTable)[256][256];  // screen pixel lookup table
     uint8_t *m_pVideoMem;               // Spectrum video memory
-    uint8_t m_border;                   // Border colour index
+    uint32_t m_border;                   // Border colour index
     bool m_bDoubleBufferingEnabled;
     bool m_bVSync;
     bool m_bBufferSwapped;
@@ -83,7 +83,7 @@ private:
     uint32_t m_lastBorderUpdate;
 
     // Border colour cache. Each item in this array represents 8 pixels
-    uint32_t m_colour[8] = { 0 };
+    uint32_t m_borderColour[8] = { 0 };
 
     const uint16_t m_palette[16] = {
         0x0000u, // black
@@ -104,6 +104,7 @@ private:
         0xFFFFu // bright white
     };
 
+public:
     [[maybe_unused]] const char *m_borderColourName[16] = {
         "black",
         "blue",

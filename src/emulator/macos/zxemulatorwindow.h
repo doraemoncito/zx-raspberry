@@ -32,7 +32,7 @@ class ZxEmulatorWindow : public QWidget {
 Q_OBJECT
 
 public:
-    ZxEmulatorWindow();
+    ZxEmulatorWindow(QString programFile);
     ~ZxEmulatorWindow() override;
 
 private slots:
@@ -47,6 +47,7 @@ private:
     QTimer *m_timer;
     ZxHardwareModel *m_model;
     Z80emu *m_z80emu;
+    QString m_programFile;
 
     void execute();
 

@@ -24,14 +24,11 @@
 #include <common/hardware/zxhardwaremodel48k.h>
 #include <zx48k_rom.h>
 #include <common/Z80emu.h>
-#include <common/aquaplane_sna.h>
-//#include <common/shock_sna.h>
-//#include <common/automania_sna.h>
-//#include <common/fpga48all_sna.h>
-//#include <common/test_2scrn_y_ay8192_sna.h>
 
 
-ZxEmulatorWindow::ZxEmulatorWindow() {
+ZxEmulatorWindow::ZxEmulatorWindow(QString programFile) : m_programFile(programFile) {
+
+    qDebug() << "Program to run: " << ((m_programFile != nullptr) ? m_programFile : "NONE");
 
     m_pZxDisplay = new ZxDisplay();
     m_z80emu = new Z80emu(m_pZxDisplay);
@@ -61,12 +58,16 @@ ZxEmulatorWindow::~ZxEmulatorWindow() {
 void ZxEmulatorWindow::initialise() {
 
     m_z80emu->initialise(zx48k_rom, zx48k_rom_len);
-    qDebug() << "Loading game in snapshot format";
-    m_z80emu->loadSnapshot(aquaplane_sna);
-//    m_z80emu->loadSnapshot(shock_sna);
-//    m_z80emu->loadSnapshot(automania_sna);
-//    m_z80emu->loadSnapshot(fpga48all_sna);
-//    m_z80emu->loadSnapshot(test_2scrn_y_ay8192_sna);
+    if (m_programFile != nullptr) {
+        qDebug() << "Loading program snapshot:" << m_programFile;
+        QFile programFile(m_programFile);
+            if (programFile.open(QIODevice::ReadOnly)) {
+                QByteArray data = programFile.readAll();
+                m_z80emu->loadSnapshot(reinterpret_cast<uint8_t *>(data.data()));
+            } else {
+                qDebug() << "Unable to find program file" << m_programFile;
+            }
+    }
 
     Clock::getInstance().setSpectrumModel(m_model);
 
