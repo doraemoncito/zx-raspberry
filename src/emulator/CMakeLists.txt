@@ -33,7 +33,7 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 #    endif()
 #endif()
 
-include_directories(BEFORE ../../include)
+include_directories(BEFORE include)
 
 add_executable(
         ${PROJECT_NAME}

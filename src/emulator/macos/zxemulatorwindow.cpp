@@ -58,19 +58,19 @@ ZxEmulatorWindow::~ZxEmulatorWindow() {
 
 void ZxEmulatorWindow::initialise() {
 
+    Clock::getInstance().setSpectrumModel(m_model);
     m_z80emu->initialise(zx48k_rom, zx48k_rom_len);
+
     if (m_programFile != nullptr) {
         qDebug() << "Loading program snapshot:" << m_programFile;
         QFile programFile(m_programFile);
             if (programFile.open(QIODevice::ReadOnly)) {
                 QByteArray data = programFile.readAll();
-                m_z80emu->loadSnapshot(reinterpret_cast<uint8_t *>(data.data()));
+                m_z80emu->loadSnapshot(reinterpret_cast<uint8_t *>(data.data()), static_cast<int32_t>(data.size()));
             } else {
                 qDebug() << "Unable to find program file" << m_programFile;
             }
     }
-
-    Clock::getInstance().setSpectrumModel(m_model);
 
     m_timer->setTimerType(Qt::PreciseTimer);
     QObject::connect(m_timer, &QTimer::timeout, this, &ZxEmulatorWindow::execute);
@@ -90,5 +90,5 @@ void ZxEmulatorWindow::execute() {
 
 void ZxEmulatorWindow::keyPressEvent(QKeyEvent *event) {
 
-    qDebug() << "ZxEmulatorWindow::keyPressEvent";
+    qDebug() << "ZxEmulatorWindow::keyPressEvent" << event->text();
 }

@@ -12,6 +12,8 @@
 
 cmake_minimum_required(VERSION 3.16.3)
 project(zx-raspberry-project LANGUAGES C CXX)
+include (CTest)
+enable_testing ()
 
 # Do NOT generate verbose makefiles
 # [Using CMake with GNU Make: How can I see the exact commands?](https://stackoverflow.com/questions/2670121/using-cmake-with-gnu-make-how-can-i-see-the-exact-commands)
@@ -47,62 +49,65 @@ set(FLOAT_ABI hard)
 
 set(CPP ${CMAKE_CXX_COMPILER})
 
-if (${AARCH} MATCHES 32)
+if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    if (${AARCH} MATCHES 32)
 
-    message(NOTICE "[INFO] Architecture: 32 bits")
+        message(NOTICE "[INFO] Architecture: 32 bits")
 
-    if (${RASPPI} MATCHES 1)
-        message(NOTICE "[INFO] Device: Raspberry Pi 1 (32 bits)")
-        set(ARCH "-DAARCH=32 -mcpu=arm1176jzf-s -marm -mfpu=vfp -mfloat-abi=${FLOAT_ABI}")
-        set(TARGET kernel)
-    elseif (${RASPPI} MATCHES 2)
-        message(NOTICE "[INFO] Device: Raspberry Pi 2 (32 bits)")
-        set(ARCH "-DAARCH=32 -mcpu=cortex-a7 -marm -mfpu=neon-vfpv4 -mfloat-abi=${FLOAT_ABI}")
-        set(TARGET kernel7)
-    elseif (${RASPPI} MATCHES 3)
-        message(NOTICE "[INFO] Device: Raspberry Pi 3 (32 bits)")
-        set(ARCH "-DAARCH=32 -mcpu=cortex-a53 -marm -mfpu=neon-fp-armv8 -mfloat-abi=${FLOAT_ABI}")
-        set(TARGET kernel8-32)
-    elseif (${RASPPI} MATCHES 4)
-        message(NOTICE "[INFO] Device: Raspberry Pi 4 (32 bits)")
-        set(ARCH "-DAARCH=32 -mcpu=cortex-a72 -marm -mfpu=neon-fp-armv8 -mfloat-abi=${FLOAT_ABI}")
-        set(TARGET kernel7l)
+        if (${RASPPI} MATCHES 1)
+            message(NOTICE "[INFO] Device: Raspberry Pi 1 (32 bits)")
+            set(ARCH "-DAARCH=32 -mcpu=arm1176jzf-s -marm -mfpu=vfp -mfloat-abi=${FLOAT_ABI}")
+            set(TARGET kernel)
+        elseif (${RASPPI} MATCHES 2)
+            message(NOTICE "[INFO] Device: Raspberry Pi 2 (32 bits)")
+            set(ARCH "-DAARCH=32 -mcpu=cortex-a7 -marm -mfpu=neon-vfpv4 -mfloat-abi=${FLOAT_ABI}")
+            set(TARGET kernel7)
+        elseif (${RASPPI} MATCHES 3)
+            message(NOTICE "[INFO] Device: Raspberry Pi 3 (32 bits)")
+            set(ARCH "-DAARCH=32 -mcpu=cortex-a53 -marm -mfpu=neon-fp-armv8 -mfloat-abi=${FLOAT_ABI}")
+            set(TARGET kernel8-32)
+        elseif (${RASPPI} MATCHES 4)
+            message(NOTICE "[INFO] Device: Raspberry Pi 4 (32 bits)")
+            set(ARCH "-DAARCH=32 -mcpu=cortex-a72 -marm -mfpu=neon-fp-armv8 -mfloat-abi=${FLOAT_ABI}")
+            set(TARGET kernel7l)
+        else ()
+            message(FATAL_ERROR "error RASPPI must be set to 1, 2, 3 or 4)")
+        endif ()
+
+        set(PREFIX ${PREFIX32})
+        set(LOADADDR 0x8000)
+
+    elseif (${AARCH} MATCHES 64)
+
+        message(NOTICE "[INFO] Architecture: 64 bits")
+
+        if (${RASPPI} MATCHES 3)
+            message(NOTICE "[INFO] Device: Raspberry Pi 3 (64 bits)")
+            set(ARCH "-DAARCH=64 -mcpu=cortex-a53 -mlittle-endian -mcmodel=small")
+            set(TARGET kernel8)
+        elseif (${RASPPI} MATCHES 4)
+            message(NOTICE "[INFO] Device: Raspberry Pi 4 (64 bits)")
+            set(ARCH "-DAARCH=64 -mcpu=cortex-a72 -mlittle-endian -mcmodel=small")
+            set(TARGET kernel8-rpi4)
+        else ()
+            message(FATAL_ERROR "error RASPPI must be set to 3 or 4")
+        endif ()
+
+        set(PREFIX ${PREFIX64})
+        set(LOADADDR 0x80000)
+
     else ()
-        message(FATAL_ERROR "error RASPPI must be set to 1, 2, 3 or 4)")
+        message(FATAL_ERROR "error AARCH must be set to 32 or 64)")
     endif ()
 
-    set(PREFIX ${PREFIX32})
-    set(LOADADDR 0x8000)
+    # Select the version of the Raspberry Pi board we are building for.  This is required because circle uses aliases for
+    # some classes and the definition of the variable RASPPI is required at build time.  Ideally this would be baked into
+    # Circle so we wouldn't have to do this.
+    add_definitions(-DRASPPI=${RASPPI})
+    # For newer versions of CMake
+    #add_compile_definitions(RASPPI=${RASPPI})
 
-elseif (${AARCH} MATCHES 64)
-
-    message(NOTICE "[INFO] Architecture: 64 bits")
-
-    if (${RASPPI} MATCHES 3)
-        message(NOTICE "[INFO] Device: Raspberry Pi 3 (64 bits)")
-        set(ARCH "-DAARCH=64 -mcpu=cortex-a53 -mlittle-endian -mcmodel=small")
-        set(TARGET kernel8)
-    elseif (${RASPPI} MATCHES 4)
-        message(NOTICE "[INFO] Device: Raspberry Pi 4 (64 bits)")
-        set(ARCH "-DAARCH=64 -mcpu=cortex-a72 -mlittle-endian -mcmodel=small")
-        set(TARGET kernel8-rpi4)
-    else ()
-        message(FATAL_ERROR "error RASPPI must be set to 3 or 4")
-    endif ()
-
-    set(PREFIX ${PREFIX64})
-    set(LOADADDR 0x80000)
-
-else ()
-    message(FATAL_ERROR "error AARCH must be set to 32 or 64)")
 endif ()
-
-# Select the version of the Raspberry Pi board we are building for.  This is required because circle uses aliases for
-# some classes and the definition of the variable RASPPI is required at build time.  Ideally this would be baked into
-# Circle so we wouldn't have to do this.
-add_definitions(-DRASPPI=${RASPPI})
-# For newer versions of CMake
-#add_compile_definitions(RASPPI=${RASPPI})
 
 # For the bare metal Raspberry Pi system we can only build the static library
 if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
@@ -176,6 +181,10 @@ endif ()
 #    install (TARGETS z80cpp LIBRARY DESTINATION ${LIB_DIR} ARCHIVE DESTINATION ${LIB_DIR})
 #endif ()
 
+
+set(INCLUDE_PREFIX "${CMAKE_SOURCE_DIR}/lib")
+set(DOCTEST_HOME "${INCLUDE_PREFIX}/doctest/doctest")
+
 # if the target is bare metal ARM (e.g. Raspberry Pi) ...
 if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
 
@@ -183,8 +192,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
     set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
     set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "")
 
-    # FIXME: make this relative
-    set(INCLUDE_PREFIX "/home/vagrant/zx-raspberry/lib")
     set(NEWLIB_ARCH "arm-none-circle")
     # For 64 bit support replace with this architecture prefix
     # set( NEWLIB_ARCH "aarch64-none-circle" )
@@ -195,6 +202,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
             BEFORE
             ${NEWLIBDIR}/include
             ${CIRCLEHOME}/include
+            ${DOCTEST_HOME}
     )
 
     # Locate the standard C++ library
@@ -249,7 +257,10 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
 else (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
 
     # Add the Circle compatibility library to the include search path
-    include_directories(BEFORE SYSTEM src/compatibility)
+    include_directories(
+            BEFORE SYSTEM
+            src/compatibility
+            ${DOCTEST_HOME})
 
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
 

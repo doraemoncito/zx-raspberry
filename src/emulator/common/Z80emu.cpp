@@ -111,6 +111,11 @@ uint8_t Z80emu::peek8(uint16_t address) {
 }
 
 void Z80emu::poke8(uint16_t address, uint8_t value) {
+    // Do not allow writes to ROM
+    if (address < 0x4000) {
+        CLogger::Get()->Write(msgFromULA, LogDebug, "Invalid write to ROM address: 0x%04X; value: %02X", address, value);
+        assert(address >= 0x4000);
+    }
     // 3 clocks for write byte to RAM
     Clock::getInstance().addTstates(3);
     m_pZ80Ram[address] = value;
@@ -136,6 +141,9 @@ uint16_t Z80emu::peek16(uint16_t address) {
 }
 
 void Z80emu::poke16(uint16_t address, RegisterPair word) {
+
+    // Do not allow writes to ROM
+    assert(address >= 0x4000);
 
     if (m_contendedRamPage[address >> 14]) {
         Clock::getInstance().addTstates(m_pDelayTstates[Clock::getInstance().getTstates()] + 3);
@@ -400,7 +408,7 @@ void Z80emu::runTest(std::ifstream* f) {
 }
 
 
-void Z80emu::initialise(unsigned char const* base, size_t size) {
+void Z80emu::initialise(const uint8_t *const base, size_t size) {
 
     memcpy(&m_pZ80Ram[0x0000],  base,  size);
     cpu.reset();
@@ -441,58 +449,44 @@ void Z80emu::initialise(unsigned char const* base, size_t size) {
 //    ------------------------------------------------------------------------
 //    Total: 49179 bytes
 //
-void Z80emu::loadSnapshot(const uint8_t* snapshot) {
+void Z80emu::loadSnapshot(const uint8_t *snapshot, size_t size) {
 
-    /* Skip the first 27 (0x1B) bytes of the snapshot to load the RAM dump into the last three 16K blocks of
-     * ZX Spectrum memory.
-     */
-    memcpy(&m_pZ80Ram[0x4000],&snapshot[0x1B],  0xC000);
-
+    assert(size == (49152 + 27));
     cpu.reset();
 
-    // then set the registers
-    // $00  I
-    // $01  HL'
-    // $03  DE'
-    // $05  BC'
-    // $07  AF'
-    // $09  HL
-    // $0B  DE
-    // $0D  BC
-    // $0F  IY
-    // $11  IX
-    // $13  IFF2    [Only bit 2 is defined: 1 for EI, 0 for DI]
-    // $14  R
-    // $15  AF
-    // $17  SP
-    // $19  Interrupt mode: 0, 1 or 2
-    // $1A  Border colour
+    cpu.setRegI(snapshot[0]);
+    cpu.setRegLx(snapshot[1]);
+    cpu.setRegHx(snapshot[2]);
+    cpu.setRegEx(snapshot[3]);
+    cpu.setRegDEx(snapshot[4]);
+    cpu.setRegCx(snapshot[5]);
+    cpu.setRegBx(snapshot[6]);
+    cpu.setRegFx(snapshot[7]);
+    cpu.setRegAx(snapshot[8]);
+    cpu.setRegL(snapshot[9]);
+    cpu.setRegH(snapshot[10]);
+    cpu.setRegE(snapshot[11]);
+    cpu.setRegD(snapshot[12]);
+    cpu.setRegC(snapshot[13]);
+    cpu.setRegB(snapshot[14]);
+    cpu.setRegIY((snapshot[15] & 0xff) | (snapshot[16] << 8));
+    cpu.setRegIX((snapshot[17] & 0xff) | (snapshot[18] << 8));
 
-    cpu.setRegI(snapshot[0x00]);
-
-    cpu.setRegHLx(bswap16(*reinterpret_cast<const uint16_t *>(&snapshot[0x01])));
-    cpu.setRegDEx(bswap16(*reinterpret_cast<const uint16_t *>(&snapshot[0x03])));
-    cpu.setRegBCx(bswap16(*reinterpret_cast<const uint16_t *>(&snapshot[0x05])));
-    cpu.setRegAFx(bswap16(*reinterpret_cast<const uint16_t *>(&snapshot[0x07])));
-    cpu.setRegHL(bswap16(*reinterpret_cast<const uint16_t *>(&snapshot[0x09])));
-    cpu.setRegDE(bswap16(*reinterpret_cast<const uint16_t *>(&snapshot[0x0B])));
-    cpu.setRegBC(bswap16(*reinterpret_cast<const uint16_t *>(&snapshot[0x0D])));
-    cpu.setRegIX(bswap16(*reinterpret_cast<const uint16_t *>(&snapshot[0x0F])));
-    cpu.setRegIY(bswap16(*reinterpret_cast<const uint16_t *>(&snapshot[0x11])));
-
-
-    bool isInterruptEnabled = (snapshot[0x13] & 0x04u) != 0;
+    /* From SNA specification:
+     *
+     * When the registers have been loaded, a RETN command is required to start the program.
+     * IFF2 is short for interrupt flip-flop 2, and for all practical purposes is the interrupt-enabled flag.
+     * Set means enabled.
+     */
+    bool isInterruptEnabled = (snapshot[19] & 0x04u) != 0;
     cpu.setIFF1(isInterruptEnabled);
     cpu.setIFF2(isInterruptEnabled);
 
-    cpu.setRegR(snapshot[0x14]);
-    cpu.setRegA(snapshot[0x16]);
-    cpu.setFlags(snapshot[0x15]);
+    cpu.setRegR(snapshot[20]);
+    cpu.setRegAF((snapshot[21] & 0xff) | (snapshot[22] << 8));
+    cpu.setRegSP((snapshot[23] & 0xff) | (snapshot[24] << 8));
 
-    // FIXME: swap twice?
-    cpu.setRegSP(bswap16(bswap16(*reinterpret_cast<const uint16_t *>(&snapshot[0x17]))));
-
-    switch (snapshot[0x19] & 0x03u) {
+    switch (snapshot[25] & 0x03u) {
         case 0:
             cpu.setIM(Z80::IntMode::IM0);
             break;
@@ -504,13 +498,18 @@ void Z80emu::loadSnapshot(const uint8_t* snapshot) {
             break;
     }
 
-    // TODO: handle the border colour at location snapshot[0x1A]
-    m_border = snapshot[0x1A];
+    m_border = snapshot[26] & 0x07;
     m_pZxDisplay->updateBorder(m_border, 0);
+
+    /* Skip the first 27 (0x1B) bytes of the snapshot to load the RAM dump into the last 3 x 16K blocks of
+     * ZX Spectrum memory.
+     */
+    memcpy(&m_pZ80Ram[0x4000],&snapshot[27],  49152 - 27);
 
     //  Alternative way of generating a RETN instruction
     //  cpu.decodeED(0x7Du); // Issue a RETN instruction to pop the return address from the stack
     cpu.setRegPC(0x72); // dirección de RETN en la ROM
+    Clock::getInstance().setTstates(0);
 }
 
 // void Z80emu::initialise(unsigned char const* base, size_t size) {

@@ -32,7 +32,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
             common/ViajeAlCentroDeLaTierraScr.h
             ../../emulator/common/zxdisplay.cpp
             ../../emulator/common/zx48k_rom.cpp
-            ../../compatibility/circle/util.cpp
             ${app_icon_macos}
     )
 
@@ -43,6 +42,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
             macos/screen.h
             macos/window.cpp
             macos/window.h
+            ../../compatibility/circle/util.cpp
+            ../../compatibility/circle/logger.cpp
     )
 
     include_directories(

@@ -39,7 +39,7 @@ private:
 public:
     CLogger() = default;
     static CLogger *Get() { return instance; };
-    void Write(const char *pSource, TLogSeverity Severity, const char *pMessage, ...) {
+    void Write(const char *pSource, TLogSeverity /* Severity */, const char *pMessage, ...) {
         char message[256];
         va_list argptr;
         va_start(argptr, pMessage);

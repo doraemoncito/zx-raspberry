@@ -27,11 +27,11 @@
 class Clock {
 
 private:
-    Clock() : m_spectrumModel(nullptr), m_tstates(0), frames(0) {};
+    Clock() : m_spectrumModel(nullptr), m_tstates(0), m_frames(0) {};
 
     ZxHardwareModel *m_spectrumModel;
     uint32_t m_tstates;
-    long frames;
+    uint32_t m_frames;
 
 public:
     static Clock &getInstance() {
@@ -69,7 +69,7 @@ public:
     void setTstates(uint32_t states) {
 
         m_tstates = (states > m_spectrumModel->tStatesPerScreenFrame()) ? 0 : states;
-        frames = 0;
+        m_frames = 0;
     }
 
 
@@ -81,26 +81,26 @@ public:
 
     [[nodiscard]] long getFrames() const {
 
-        return frames;
+        return m_frames;
     }
 
 
     void endFrame() {
-
-        frames++;
+        assert(m_tstates >= m_spectrumModel->tStatesPerScreenFrame());
+        m_frames++;
         m_tstates -= m_spectrumModel->tStatesPerScreenFrame();
     }
 
 
-    [[nodiscard]] uint32_t getAbsTstates() const {
+    [[nodiscard]] uint64_t getAbsTstates() const {
 
-        return frames * m_spectrumModel->tStatesPerScreenFrame() + m_tstates;
+        return m_frames * m_spectrumModel->tStatesPerScreenFrame() + m_tstates;
     }
 
 
     void reset() {
 
-        frames = m_tstates = 0;
+        m_frames = m_tstates = 0;
     }
 
 };

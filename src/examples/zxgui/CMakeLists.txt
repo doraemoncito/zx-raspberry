@@ -28,7 +28,6 @@ add_executable(
         ../../emulator/common/gui/zxgroup.h
         ../../emulator/common/zx48k_rom.cpp
         ../../emulator/common/zxdisplay.cpp
-        ../../compatibility/circle/util.cpp
         common/ViajeAlCentroDeLaTierraScr.h
 )
 
@@ -51,6 +50,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
             macos/screen.h
             macos/window.cpp
             macos/window.h
+            ../../compatibility/circle/util.cpp
+            ../../compatibility/circle/logger.cpp
     )
 
     include_directories(
