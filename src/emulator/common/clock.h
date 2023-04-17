@@ -21,6 +21,7 @@
 
 
 #include <memory>
+#include <cassert>
 #include "common/hardware/zxhardwaremodel.h"
 
 

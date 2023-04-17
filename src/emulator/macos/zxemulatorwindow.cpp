@@ -59,7 +59,7 @@ ZxEmulatorWindow::~ZxEmulatorWindow() {
 void ZxEmulatorWindow::initialise() {
 
     Clock::getInstance().setSpectrumModel(m_model);
-    m_z80emu->initialise(zx48k_rom, zx48k_rom_len);
+    m_z80emu->loadRom(zx48k_rom, zx48k_rom_len);
 
     if (m_programFile != nullptr) {
         qDebug() << "Loading program snapshot:" << m_programFile;

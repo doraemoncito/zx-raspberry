@@ -207,16 +207,16 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
     }
 
     m_Logger.Write(FromKernel, LogNotice, "Loading 48K ROM");
-    z80emu->initialise(zx48k_rom, zx48k_rom_len);
+    z80emu->loadRom(zx48k_rom, zx48k_rom_len);
 
     m_Logger.Write(FromKernel, LogNotice, "Loading game in SNA format");
-//    z80emu->loadSnapshot(shock_sna);
-    z80emu->loadSnapshot(aquaplane_sna);
-//    z80emu->loadSnapshot(overscan_sna);
-//    z80emu->loadSnapshot(test_2scrn_y_ay8192_sna);
-//    z80emu->loadSnapshot(automania_sna);
-//    z80emu->loadSnapshot(testkeys_sna);
-//    z80emu->loadSnapshot(fpga48all_sna);
+//    z80emu->loadSnapshot(shock_sna, shock_sna_len);
+    z80emu->loadSnapshot(aquaplane_sna, aquaplane_sna_len);
+//    z80emu->loadSnapshot(overscan_sna, overscan_sna_len);
+//    z80emu->loadSnapshot(test_2scrn_y_ay8192_sna, test_2scrn_y_ay8192_sna_len);
+//    z80emu->loadSnapshot(automania_sna, automania_sna_len);
+//    z80emu->loadSnapshot(testkeys_sna, testkeys_sna_len);
+//    z80emu->loadSnapshot(fpga48all_sna, fpga48all_sna_len);
 
     CCPUThrottle *ccpuThrottle = new CCPUThrottle(CPUSpeedUnknown);
 //    CCPUThrottle *ccpuThrottle = CCPUThrottle::Get();

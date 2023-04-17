@@ -408,7 +408,7 @@ void Z80emu::runTest(std::ifstream* f) {
 }
 
 
-void Z80emu::initialise(const uint8_t *const base, size_t size) {
+void Z80emu::loadRom(const uint8_t *const base, size_t size) {
 
     memcpy(&m_pZ80Ram[0x0000],  base,  size);
     cpu.reset();

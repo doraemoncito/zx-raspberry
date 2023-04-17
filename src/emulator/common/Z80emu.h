@@ -66,7 +66,7 @@ public:
 #endif
 
     void runTest(std::ifstream* f);
-    void initialise(const uint8_t * const base, size_t size);
+    void loadRom(const uint8_t * const base, size_t size);
     void loadSnapshot(const uint8_t * const snapshot, size_t size);
 
     void execute(uint32_t);
