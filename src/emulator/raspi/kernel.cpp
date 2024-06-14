@@ -33,9 +33,9 @@
 #include "../include/zx48k_rom.h"
 //#include "test_2scrn_y_ay8192_sna.h"
 //#include "fpga48all_sna.h"
-//#include "testkeys_sna.h"
+#include "testkeys_sna.h"
 //#include "overscan_sna.h"
-#include "automania_sna.h"
+//#include "automania_sna.h"
 //#include "aquaplane_sna.h"
 //#include "shock_sna.h"
 #include "kernel.h"
@@ -214,8 +214,8 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
 //    z80emu->loadSnapshot(aquaplane_sna, aquaplane_sna_len);
 //    z80emu->loadSnapshot(overscan_sna, overscan_sna_len);
 //    z80emu->loadSnapshot(test_2scrn_y_ay8192_sna, test_2scrn_y_ay8192_sna_len);
-    z80emu->loadSnapshot(automania_sna, automania_sna_len);
-//    z80emu->loadSnapshot(testkeys_sna, testkeys_sna_len);
+//    z80emu->loadSnapshot(automania_sna, automania_sna_len);
+    z80emu->loadSnapshot(testkeys_sna, testkeys_sna_len);
 //    z80emu->loadSnapshot(fpga48all_sna, fpga48all_sna_len);
 
     CCPUThrottle *ccpuThrottle = new CCPUThrottle(CPUSpeedUnknown);

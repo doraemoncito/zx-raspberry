@@ -45,22 +45,30 @@
  * ---------------------------------------------------------------------------
  *
  * The neat arrangement of ports means that the B register need only be rotated left to work up the left-hand side and
- * then down the right-hand side of the keyboard. When the reset bit drops into the carry then all 8 half-rows have
+ * then down the right-hand side of the keyboard. When the reset bit drops into the carry, then all 8 half-rows have
  * been read. Shift is the first key to be read. The lower six bits of the shifts are unambiguous.
  *
  * reference: https://web.archive.org/web/20150825085532/http://www.wearmouth.demon.co.uk/zx82.htm
  */
 
-void ZxKeyboard::keyPressEvent(Z80emu &zxRaspberry, QKeyEvent &event) {
+ZxKeyboard::ZxKeyboard() {
+}
 
-    uint8_t port_F7FE = 0xFFu;
-    uint8_t port_FBFE = 0xFFu;
-    uint8_t port_FDFE = 0xFFu;
-    uint8_t port_FEFE = 0xFFu;
-    uint8_t port_EFFE = 0xFFu;
-    uint8_t port_DFFE = 0xFFu;
-    uint8_t port_BFFE = 0xFFu;
-    uint8_t port_7FFE = 0xFFu;
+
+void ZxKeyboard::reset() {
+
+    port_F7FE = 0xFFu;
+    port_FBFE = 0xFFu;
+    port_FDFE = 0xFFu;
+    port_FEFE = 0xFFu;
+    port_EFFE = 0xFFu;
+    port_DFFE = 0xFFu;
+    port_BFFE = 0xFFu;
+    port_7FFE = 0xFFu;
+}
+
+
+void ZxKeyboard::keyPressEvent(Z80emu &zxRaspberry, QKeyEvent &event) {
 
 //    qDebug() << "Received key press event" << &event;
 
@@ -235,18 +243,169 @@ void ZxKeyboard::keyPressEvent(Z80emu &zxRaspberry, QKeyEvent &event) {
 }
 
 
-void ZxKeyboard::keyReleaseEvent(Z80emu &zxRaspberry, QKeyEvent &) {
-
-    uint8_t port_F7FE = 0xFFu;
-    uint8_t port_FBFE = 0xFFu;
-    uint8_t port_FDFE = 0xFFu;
-    uint8_t port_FEFE = 0xFFu;
-    uint8_t port_EFFE = 0xFFu;
-    uint8_t port_DFFE = 0xFFu;
-    uint8_t port_BFFE = 0xFFu;
-    uint8_t port_7FFE = 0xFFu;
+void ZxKeyboard::keyReleaseEvent(Z80emu &zxRaspberry, QKeyEvent &event) {
 
 //    qDebug() << "Received key release event" << &event;
+
+    // Modifier keys pressed on their own
+    switch (event.key()) {
+        case Qt::Key_Shift:         // Left shift key -> CAPS SHIFT
+            port_FEFE |= ~KEY_PRESSED_BIT0;
+            break;
+        case Qt::Key_Control:       // Command key -> SYMBOL SHIFT
+        case Qt::Key_Meta:          // Control key -> SYMBOL SHIFT
+        case Qt::Key_Alt:           // Option key -> SYMBOL SHIFT
+        case Qt::Key_AltGr:         // Alt Gr -> SYMBOL SHIFT
+            port_7FFE |= ~KEY_PRESSED_BIT1;
+            break;
+    }
+
+    // Key modifiers when used in combination with other keys
+    Qt::KeyboardModifiers modifiers = event.modifiers();
+
+    if (modifiers & Qt::ShiftModifier)
+        port_FEFE |= ~KEY_PRESSED_BIT0;
+
+    if ((modifiers & Qt::ControlModifier) || (modifiers & Qt::AltModifier) || (modifiers & Qt::MetaModifier))
+        port_7FFE |= ~KEY_PRESSED_BIT1;
+
+    switch (event.key()) {
+        // row 0xF7FE
+        case Qt::Key_1: // 1
+            port_F7FE |= ~KEY_PRESSED_BIT0;
+            break;
+        case Qt::Key_2: // 2
+            port_F7FE |= ~KEY_PRESSED_BIT1;
+            break;
+        case Qt::Key_3: // 3
+            port_F7FE |= ~KEY_PRESSED_BIT2;
+            break;
+        case Qt::Key_4: // 4
+            port_F7FE |= ~KEY_PRESSED_BIT3;
+            break;
+        case Qt::Key_Left:
+        case Qt::Key_5: // 5 (left)
+            port_F7FE |= ~KEY_PRESSED_BIT4;
+            break;
+
+            // row 0xEFFE
+        case Qt::Key_Down:
+        case Qt::Key_6: // 6 (down)
+            port_EFFE |= ~KEY_PRESSED_BIT4;
+            break;
+        case Qt::Key_Up:
+        case Qt::Key_7: // 7 (up)
+            port_EFFE |= ~KEY_PRESSED_BIT3;
+            break;
+        case Qt::Key_Right:
+        case Qt::Key_8: // 8 (right)
+            port_EFFE |= ~KEY_PRESSED_BIT2;
+            break;
+        case Qt::Key_9: // 9
+            port_EFFE |= ~KEY_PRESSED_BIT1;
+            break;
+        case Qt::Key_0: // 0
+            port_EFFE |= ~KEY_PRESSED_BIT0;
+            break;
+
+            // row 0xFBFE
+        case Qt::Key_Q: // Q
+            port_FBFE |= ~KEY_PRESSED_BIT0;
+            break;
+        case Qt::Key_W: // W
+            port_FBFE |= ~KEY_PRESSED_BIT1;
+            break;
+        case Qt::Key_E: // E
+            port_FBFE |= ~KEY_PRESSED_BIT2;
+            break;
+        case Qt::Key_R: // R
+            port_FBFE |= ~KEY_PRESSED_BIT3;
+            break;
+        case Qt::Key_T: // T
+            port_FBFE |= ~KEY_PRESSED_BIT4;
+            break;
+
+            // row 0xDFFE
+        case Qt::Key_Y: // Y
+            port_DFFE |= ~KEY_PRESSED_BIT4;
+            break;
+        case Qt::Key_U: // U
+            port_DFFE |= ~KEY_PRESSED_BIT3;
+            break;
+        case Qt::Key_I: // I
+            port_DFFE |= ~KEY_PRESSED_BIT2;
+            break;
+        case Qt::Key_O: // O
+            port_DFFE |= ~KEY_PRESSED_BIT1;
+            break;
+        case Qt::Key_P: // P
+            port_DFFE |= ~KEY_PRESSED_BIT0;
+            break;
+
+            // row 0xFDFE
+        case Qt::Key_A: // A
+            port_FDFE |= ~KEY_PRESSED_BIT0;
+            break;
+        case Qt::Key_S: // S
+            port_FDFE |= ~KEY_PRESSED_BIT1;
+            break;
+        case Qt::Key_D: // D
+            port_FDFE |= ~KEY_PRESSED_BIT2;
+            break;
+        case Qt::Key_F: // F
+            port_FDFE |= ~KEY_PRESSED_BIT3;
+            break;
+        case Qt::Key_G: // G
+            port_FDFE |= ~KEY_PRESSED_BIT4;
+            break;
+
+            // row 0xBFFE
+        case Qt::Key_H: // H
+            port_BFFE |= ~KEY_PRESSED_BIT4;
+            break;
+        case Qt::Key_J: // J
+            port_BFFE |= ~KEY_PRESSED_BIT3;
+            break;
+        case Qt::Key_K: // K
+            port_BFFE |= ~KEY_PRESSED_BIT2;
+            break;
+        case Qt::Key_L: // L
+            port_BFFE |= ~KEY_PRESSED_BIT1;
+            break;
+        case Qt::Key_Return:
+        case Qt::Key_Enter: // ENTER
+            port_BFFE |= ~KEY_PRESSED_BIT0;
+            break;
+
+            // row 0xFEFE
+        case Qt::Key_Z: // Z
+            port_FEFE |= ~KEY_PRESSED_BIT1;
+            break;
+        case Qt::Key_X: // X
+            port_FEFE |= ~KEY_PRESSED_BIT2;
+            break;
+        case Qt::Key_C: // C
+            port_FEFE |= ~KEY_PRESSED_BIT3;
+            break;
+        case Qt::Key_V: // V
+            port_FEFE |= ~KEY_PRESSED_BIT4;
+            break;
+
+            // row 0x7FFE
+        case Qt::Key_B: // B
+            port_7FFE |= ~KEY_PRESSED_BIT4;
+            break;
+        case Qt::Key_N: // N
+            port_7FFE |= ~KEY_PRESSED_BIT3;
+            break;
+        case Qt::Key_M: // M
+            port_7FFE |= ~KEY_PRESSED_BIT2;
+            break;
+            // SYMBOL SHIFT is handled as a modifier.  See code above.
+        case Qt::Key_Space: // BREAK SPACE
+            port_7FFE |= ~KEY_PRESSED_BIT0;
+            break;
+    }
 
     zxRaspberry.internalOutPort(0xF7FE, port_F7FE);
     zxRaspberry.internalOutPort(0xFBFE, port_FBFE);

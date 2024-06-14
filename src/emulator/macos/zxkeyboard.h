@@ -26,8 +26,33 @@ class Z80emu;
 class ZxKeyboard {
 
 public:
+    ZxKeyboard();
+    void reset();
     void keyPressEvent(Z80emu &zxRaspberry, QKeyEvent &event);
     void keyReleaseEvent(Z80emu &zxRaspberry, QKeyEvent &event);
+
+private:
+
+//    uint8_t m_keyboardPort[8] = {0xFFu,0xFFu,0xFFu,0xFFu,0xFFu,0xFFu,0xFFu,0xFFu };
+//    enum PORT {
+//        PORT_F7FE = 0,
+//        PORT_FBFE,
+//        PORT_FDFE,
+//        PORT_FEFE,
+//        PORT_EFFE,
+//        PORT_DFFE,
+//        PORT_BFFE,
+//        PORT_7FFE
+//    };
+
+    uint8_t port_F7FE = 0xFFu;
+    uint8_t port_FBFE = 0xFFu;
+    uint8_t port_FDFE = 0xFFu;
+    uint8_t port_FEFE = 0xFFu;
+    uint8_t port_EFFE = 0xFFu;
+    uint8_t port_DFFE = 0xFFu;
+    uint8_t port_BFFE = 0xFFu;
+    uint8_t port_7FFE = 0xFFu;
 
 };
 

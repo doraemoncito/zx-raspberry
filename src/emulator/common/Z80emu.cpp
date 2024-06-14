@@ -220,10 +220,10 @@ uint8_t Z80emu::inPort(uint16_t port) {
     } else if (port == 0x011Fu) {  // Kempston joystick port
         // No need to do anything here at this point
     } else {
-#ifdef DEBUG
-        // Log the port number that the emulated ZX Spectrum software is trying to access
-        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT IN ] port 0x%04X <-- value 0x%02X", port, m_pIOPort[port]);
-#endif
+//#ifdef DEBUG
+//        // Log the port number that the emulated ZX Spectrum software is trying to access
+//        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT IN ] port 0x%04X <-- value 0x%02X", port, m_pIOPort[port]);
+//#endif
     }
 
     return m_pIOPort[port];
