@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 Jose Hernandez
+ * Copyright (c) 2020-2024 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -27,6 +27,7 @@ class ZxKeyboard {
 
 public:
     void keyPressEvent(Z80emu &zxRaspberry, QKeyEvent &event);
+    void keyReleaseEvent(Z80emu &zxRaspberry, QKeyEvent &event);
 
 };
 

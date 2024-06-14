@@ -105,7 +105,7 @@ private:
     };
 
 public:
-    [[maybe_unused]] const char *m_borderColourName[16] = {
+    [[maybe_unused]] const char *m_paletteColourName[16] = {
         "black",
         "blue",
         "red",

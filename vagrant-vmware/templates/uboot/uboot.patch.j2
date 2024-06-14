@@ -1,0 +1,15 @@
+diff --git a/include/configs/rpi.h b/include/configs/rpi.h
+index b53a4b65d0..5084c1ffd5 100644
+--- a/include/configs/rpi.h
++++ b/include/configs/rpi.h
+@@ -60,7 +60,9 @@
+ #define CONFIG_LOADADDR                        0x00200000
+
+ #ifdef CONFIG_ARM64
+-#define CONFIG_SYS_BOOTM_LEN           SZ_64M
++#define CONFIG_SYS_BOOTM_LEN           SZ_256M
++#else
++#define CONFIG_SYS_BOOTM_LEN           SZ_128M
+ #endif
+
+ /* Devices */

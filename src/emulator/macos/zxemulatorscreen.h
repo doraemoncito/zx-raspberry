@@ -34,7 +34,7 @@ Q_OBJECT
 
 public:
     explicit ZxEmulatorScreen(Z80emu *z80emu, ZxDisplay *pZxDisplay, QWidget *parent = nullptr);
-    ~ZxEmulatorScreen();
+    ~ZxEmulatorScreen() override;
 
     [[nodiscard]] QSize minimumSizeHint() const override;
     [[nodiscard]] QSize sizeHint() const override;
@@ -44,17 +44,21 @@ public slots:
 protected:
     void paintEvent(QPaintEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
 
 private:
-    bool antiAliased = false;
-    bool showDialog = false;
+    bool m_antiAliased = false;
+    bool m_showDialog = false;
+    uint8_t m_scale = 3;
+    bool m_flash = false;
+    uint32_t m_frameCounter = 0;
 
-    Z80emu *m_z80emu;
-    ZxKeyboard *m_zxKeyboard;
+    Z80emu *m_pZ80emu;
+    ZxKeyboard *m_pZxKeyboard;
     ZxDisplay *m_pZxDisplay;
     CBcmFrameBuffer *m_pBcmFrameBuffer = nullptr;
 
-    QImage image = QImage(352, 296, QImage::Format_RGB32);
+    QImage image = QImage(ZxDisplay::DISPLAY_WIDTH, ZxDisplay::DISPLAY_HEIGHT, QImage::Format_RGB32);
 };
 
 #endif // SCREEN_H

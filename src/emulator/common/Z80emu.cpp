@@ -54,23 +54,23 @@ Z80emu::Z80emu(ZxDisplay *pZxDisplay) :
     m_border(0x07u),
     m_pZxDisplay(pZxDisplay)
 {
-    m_pZ80Ram = reinterpret_cast<uint8_t *>(new uint32_t[0x4000]);
-    m_pZ80Ports = reinterpret_cast<uint8_t *>(new uint32_t[0x4000]);
+    m_pMemory = new uint8_t[0x10000];
+    m_pIOPort = new uint8_t[0x10000];
 
     Clock::getInstance().reset();
 
     // FIXME: Implement keyboard support. For now, we'll turn the keyboard off until we implement it.
     // Bits are set to 0 for any key that is pressed and 1 for any key that is not pressed. Multiple key presses can be read simultaneously.
     // http://www.breakintoprogram.co.uk/computers/zx-spectrum/keyboard
-    m_pZ80Ports[0xFEFE] = 0xFF;
-    m_pZ80Ports[0xFDFE] = 0xFF;
-    m_pZ80Ports[0xFBFE] = 0xFF;
-    m_pZ80Ports[0xF7FE] = 0xFF;
-    m_pZ80Ports[0xEFFE] = 0xFF;
-    m_pZ80Ports[0xDFFE] = 0xFF;
-    m_pZ80Ports[0xBFFE] = 0xFF;
-    m_pZ80Ports[0x7FFE] = 0xFF;
-    m_pZ80Ports[0x00FE] = 0xFF;
+    m_pIOPort[0xFEFE] = 0xFF;
+    m_pIOPort[0xFDFE] = 0xFF;
+    m_pIOPort[0xFBFE] = 0xFF;
+    m_pIOPort[0xF7FE] = 0xFF;
+    m_pIOPort[0xEFFE] = 0xFF;
+    m_pIOPort[0xDFFE] = 0xFF;
+    m_pIOPort[0xBFFE] = 0xFF;
+    m_pIOPort[0x7FFE] = 0xFF;
+    m_pIOPort[0x00FE] = 0xFF;
 
     m_contendedRamPage[0] = m_contendedIOPage[0] = false;
     m_contendedRamPage[1] = m_contendedIOPage[1] = true;
@@ -101,24 +101,26 @@ Z80emu::~Z80emu() = default;
 uint8_t Z80emu::fetchOpcode(uint16_t address) {
     // 3 clocks to fetch opcode from RAM and 1 execution clock = 4 t-states
     Clock::getInstance().addTstates(4);
-    return m_pZ80Ram[address];
+    return m_pMemory[address];
 }
 
 uint8_t Z80emu::peek8(uint16_t address) {
     // 3 clocks for read byte from RAM
     Clock::getInstance().addTstates(3);
-    return m_pZ80Ram[address];
+    return m_pMemory[address];
 }
 
 void Z80emu::poke8(uint16_t address, uint8_t value) {
     // Do not allow writes to ROM
-    if (address < 0x4000) {
+    if (address >= 0x4000) {
+        m_pMemory[address] = value;
+    } else {
         CLogger::Get()->Write(msgFromULA, LogDebug, "Invalid write to ROM address: 0x%04X; value: %02X", address, value);
-        assert(address >= 0x4000);
+//        assert(address >= 0x4000);
     }
-    // 3 clocks for write byte to RAM
+
+    // Writing a byte to RAM takes 3 clock cycles
     Clock::getInstance().addTstates(3);
-    m_pZ80Ram[address] = value;
 }
 
 uint16_t Z80emu::peek16(uint16_t address) {
@@ -128,7 +130,7 @@ uint16_t Z80emu::peek16(uint16_t address) {
         Clock::getInstance().addTstates(3);
     }
 
-    int lsb = m_pZ80Ram[address];
+    int lsb = m_pMemory[address];
     address = (address + 1) & 0xffff;
 
     if (m_contendedRamPage[address >> 14]) {
@@ -137,7 +139,7 @@ uint16_t Z80emu::peek16(uint16_t address) {
         Clock::getInstance().addTstates(3);
     }
 
-    return ((m_pZ80Ram[address] << 8) | lsb);
+    return ((m_pMemory[address] << 8) | lsb);
 }
 
 void Z80emu::poke16(uint16_t address, RegisterPair word) {
@@ -151,7 +153,7 @@ void Z80emu::poke16(uint16_t address, RegisterPair word) {
         Clock::getInstance().addTstates(3);
     }
 
-    m_pZ80Ram[address] = word.byte8.lo;
+    m_pMemory[address] = word.byte8.lo;
     address = (address + 1) & 0xffff;
 
     if (m_contendedRamPage[address >> 14]) {
@@ -160,7 +162,7 @@ void Z80emu::poke16(uint16_t address, RegisterPair word) {
         Clock::getInstance().addTstates(3);
     }
 
-    m_pZ80Ram[address] = word.byte8.hi;
+    m_pMemory[address] = word.byte8.hi;
 }
 
 uint8_t Z80emu::inPort(uint16_t port) {
@@ -177,52 +179,54 @@ uint8_t Z80emu::inPort(uint16_t port) {
      * https://neuro.me.uk/projects/wos/sinclairfaq.dev/ng/cssfaq/reference/48kreference.htm
      */
     // TODO: extract this code to a keyboard ULA class
-    if ((port & 0x00FFu) == 0x00FEu) {  // ZX spectrum ULA allocated port
+    if ((port & 0x00FFu) == 0x00FEu) {  // ZX Spectrum ULA allocated port
         uint8_t value = 0xFF;
 
         const uint8_t addressLine = (port >> 0x08u) & 0xFFu;
         if ((addressLine & (0xFFu - 0xF7u)) == 0x00u) {
             // 1 2 3 4 5
-            value &= m_pZ80Ports[0xF7FEu];
+            value &= m_pIOPort[0xF7FEu];
         }
         if ((addressLine & (0xFFu - 0xFBu)) == 0x00u) {
             // Q W E R T
-            value &= m_pZ80Ports[0xFBFEu];
+            value &= m_pIOPort[0xFBFEu];
         }
         if ((addressLine & (0xFFu - 0xFDu)) == 0x00u) {
             // A S D F G
-            value &= m_pZ80Ports[0xFDFEu];
+            value &= m_pIOPort[0xFDFEu];
         }
         if ((addressLine & (0xFFu - 0xFEu)) == 0x00u) {
             // SHIFT Z X C V
-            value &= m_pZ80Ports[0xFEFEu];
+            value &= m_pIOPort[0xFEFEu];
         };
         if ((addressLine & (0xFFu - 0xEFu)) == 0x00u) {
             // 0 9 8 7 6
-            value &= m_pZ80Ports[0xEFFEu];
+            value &= m_pIOPort[0xEFFEu];
         }
         if ((addressLine & (0xFFu - 0xDFu)) == 0x00u) {
             // P O I U Y
-            value &= m_pZ80Ports[0xDFFEu];
+            value &= m_pIOPort[0xDFFEu];
         }
         if ((addressLine & (0xFFu - 0xBFu)) == 0x00u) {
             // ENTER L K J H
-            value &= m_pZ80Ports[0xBFFEu];
+            value &= m_pIOPort[0xBFFEu];
         }
         if ((addressLine & (0xFFu - 0x7Fu)) == 0x00u) {
             // SPACE-BREAK SYMBOL-SHIFT M N B
-            value &= m_pZ80Ports[0x7FFEu];
+            value &= m_pIOPort[0x7FFEu];
         };
 
         return value;
     } else if (port == 0x011Fu) {  // Kempston joystick port
         // No need to do anything here at this point
     } else {
+#ifdef DEBUG
         // Log the port number that the emulated ZX Spectrum software is trying to access
-        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT IN ] port 0x%04X <-- value 0x%02X", port, m_pZ80Ports[port]);
+        CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT IN ] port 0x%04X <-- value 0x%02X", port, m_pIOPort[port]);
+#endif
     }
 
-    return m_pZ80Ports[port];
+    return m_pIOPort[port];
 }
 
 /*
@@ -231,11 +235,11 @@ uint8_t Z80emu::inPort(uint16_t port) {
 // FIXME: Rename this to make clear that we are setting the value of the port as if we were reading from an external
 // device, i.e. the keyboard or joystick.  "setPort"or "internalSetPort" might be a better name for this method.
 void Z80emu::internalOutPort(uint16_t port, uint8_t value) {
-    if (m_pZ80Ports[port] != value) {
+    if (m_pIOPort[port] != value) {
 #ifdef DEBUG
         CLogger::Get()->Write(msgFromULA, LogDebug, "[PORT INT] value 0x%02X --> port 0x%04X", value, port);
 #endif //DEBUG
-        m_pZ80Ports[port] = value;
+        m_pIOPort[port] = value;
     }
 }
 
@@ -278,8 +282,8 @@ void Z80emu::outPort(uint16_t port, uint8_t value) {
     // 4 clocks for write byte to bus
     Clock::getInstance().addTstates(4);
 
-    /* NOTE: All even ports on the ZX spectrum are allocated to the ULA but to avoid problems with other I/O devices
-     * only Port 0xFE should be used.  We do however need to check since many programs will write to any even port to
+    /* NOTE: All even ports on the ZX Spectrum are allocated to the ULA but to avoid problems with other I/O devices
+     * only Port 0xFE should be used. We do, however, need to check since many programs will write to any even port to
      * do things like change the border, etc...
      */
     if ((port & 0x0001) == 0) {
@@ -307,14 +311,14 @@ void Z80emu::outPort(uint16_t port, uint8_t value) {
             CLogger::Get()->Write(msgFromULA, LogDebug,
                                   "(OutPort) Frame: %5d; T-states: %5d; Port: 0x%04X; Value: %d (%s)",
                                   Clock::getInstance().getFrames(),
-                                  tstates, port, border, m_pZxDisplay->m_borderColourName[border]);
+                                  tstates, port, border, m_pZxDisplay->m_paletteColourName[border]);
 #endif //DEBUG
             m_pZxDisplay->updateBorder(m_border, tstates);
         }
 
     }
 
-    m_pZ80Ports[port] = value;
+    m_pIOPort[port] = value;
 }
 
 void Z80emu::addressOnBus(uint16_t /* address */, int32_t wstates) {
@@ -388,16 +392,16 @@ void Z80emu::runTest(std::ifstream* f) {
     size = f->tellg();
     cout << "Test size: " << size << endl;
     f->seekg(0, ios::beg);
-    f->read((char *) &m_pZ80Ram[0x100], size);
+    f->read((char *) &m_pMemory[0x100], size);
     f->close();
 
     cpu.reset();
     finish = false;
 
-    m_pZ80Ram[0] = (uint8_t) 0xC3;
-    m_pZ80Ram[1] = 0x00;
-    m_pZ80Ram[2] = 0x01; // JP 0x100 CP/M TPA
-    m_pZ80Ram[5] = (uint8_t) 0xC9; // Return from BDOS call
+    m_pMemory[0] = (uint8_t) 0xC3;
+    m_pMemory[1] = 0x00;
+    m_pMemory[2] = 0x01; // JP 0x100 CP/M TPA
+    m_pMemory[5] = (uint8_t) 0xC9; // Return from BDOS call
 
 #ifdef WITH_BREAKPOINT_SUPPORT
     cpu.setBreakpoint(0x0005, true);
@@ -410,7 +414,7 @@ void Z80emu::runTest(std::ifstream* f) {
 
 void Z80emu::loadRom(const uint8_t *const base, size_t size) {
 
-    memcpy(&m_pZ80Ram[0x0000],  base,  size);
+    memcpy(&m_pMemory[0x0000], base, size);
     cpu.reset();
 }
 
@@ -469,8 +473,8 @@ void Z80emu::loadSnapshot(const uint8_t *snapshot, size_t size) {
     cpu.setRegD(snapshot[12]);
     cpu.setRegC(snapshot[13]);
     cpu.setRegB(snapshot[14]);
-    cpu.setRegIY((snapshot[15] & 0xff) | (snapshot[16] << 8));
-    cpu.setRegIX((snapshot[17] & 0xff) | (snapshot[18] << 8));
+    cpu.setRegIY((snapshot[15] & 0xFFu) | (snapshot[16] << 0x08u));
+    cpu.setRegIX((snapshot[17] & 0xFFu) | (snapshot[18] << 0x08u));
 
     /* From SNA specification:
      *
@@ -483,8 +487,8 @@ void Z80emu::loadSnapshot(const uint8_t *snapshot, size_t size) {
     cpu.setIFF2(isInterruptEnabled);
 
     cpu.setRegR(snapshot[20]);
-    cpu.setRegAF((snapshot[21] & 0xff) | (snapshot[22] << 8));
-    cpu.setRegSP((snapshot[23] & 0xff) | (snapshot[24] << 8));
+    cpu.setRegAF((snapshot[21] & 0xFFu) | (snapshot[22] << 0x08u));
+    cpu.setRegSP((snapshot[23] & 0xFFu) | (snapshot[24] << 0x08u));
 
     switch (snapshot[25] & 0x03u) {
         case 0:
@@ -498,18 +502,18 @@ void Z80emu::loadSnapshot(const uint8_t *snapshot, size_t size) {
             break;
     }
 
-    m_border = snapshot[26] & 0x07;
+    m_border = snapshot[26] & 0x07u;
     m_pZxDisplay->updateBorder(m_border, 0);
 
-    /* Skip the first 27 (0x1B) bytes of the snapshot to load the RAM dump into the last 3 x 16K blocks of
+    /* Skip the first 27 (0x1B) bytes of the snapshot to load the RAM dump into the last 3 x 16K blocks (0xC000) of
      * ZX Spectrum memory.
      */
-    memcpy(&m_pZ80Ram[0x4000],&snapshot[27],  49152 - 27);
+    memcpy(&m_pMemory[0x4000], &snapshot[0x1B], 0xC000u);
 
-    //  Alternative way of generating a RETN instruction
-    //  cpu.decodeED(0x7Du); // Issue a RETN instruction to pop the return address from the stack
-    cpu.setRegPC(0x72); // dirección de RETN en la ROM
     Clock::getInstance().setTstates(0);
+
+    // ROM address 0x72 contains the 'RETN' instruction required to resume the program
+    cpu.setRegPC(0x72u);
 }
 
 // void Z80emu::initialise(unsigned char const* base, size_t size) {
@@ -544,5 +548,5 @@ void Z80emu::execute(const uint32_t tstates) {
 
 
 uint8_t *Z80emu::getRam() {
-    return m_pZ80Ram;
+    return m_pMemory;
 }

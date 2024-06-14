@@ -31,8 +31,8 @@ class Z80emu : public Z80operations
 {
 private:
     Z80 cpu;
-    uint8_t *m_pZ80Ram;
-    uint8_t *m_pZ80Ports;
+    uint8_t *m_pMemory;
+    uint8_t *m_pIOPort;
     bool finish;
     uint8_t m_border;
     ZxDisplay *m_pZxDisplay;

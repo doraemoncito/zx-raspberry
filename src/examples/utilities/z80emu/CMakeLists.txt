@@ -74,11 +74,6 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES "Generic" )
 
     set(
             LIBS
-            "${NEWLIBDIR}/lib/libc.a"
-            "${NEWLIBDIR}/lib/libcirclenewlib.a"
-            "${NEWLIBDIR}/lib/libg.a"
-            "${NEWLIBDIR}/lib/libm.a"
-            "${NEWLIBDIR}/lib/libnosys.a"
             "${CIRCLEHOME}/addon/SDCard/libsdcard.a"
             "${CIRCLEHOME}/lib/bt/libbluetooth.a"
             "${CIRCLEHOME}/lib/fs/fat/libfatfs.a"
@@ -88,6 +83,11 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES "Generic" )
             "${CIRCLEHOME}/lib/net/libnet.a"
             "${CIRCLEHOME}/lib/sched/libsched.a"
             "${CIRCLEHOME}/lib/usb/libusb.a"
+            "${NEWLIBDIR}/lib/libc.a"
+            "${NEWLIBDIR}/lib/libcirclenewlib.a"
+            "${NEWLIBDIR}/lib/libg.a"
+            "${NEWLIBDIR}/lib/libm.a"
+            "${NEWLIBDIR}/lib/libnosys.a"
             "/usr/local/opt/gcc-arm-8.2-2019.01-x86_64-arm-eabi/bin/../lib/gcc/arm-eabi/8.2.1/../../../../arm-eabi/lib/arm/v5te/hard/libstdc++.a"
             "/usr/local/opt/gcc-arm-8.2-2019.01-x86_64-arm-eabi/bin/../lib/gcc/arm-eabi/8.2.1/arm/v5te/hard/libgcc.a"
 #            "/usr/local/opt/gcc-arm-8.3-2019.03-x86_64-aarch64-elf/aarch64-elf/lib/libstdc++.a"

@@ -7,7 +7,7 @@
 
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "doctest.h"
+#include <doctest.h>
 #include "z80.h"
 
 Z80 target(nullptr);

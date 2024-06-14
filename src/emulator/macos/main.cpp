@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 Jose Hernandez
+ * Copyright (c) 2020-2024 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
     parser.addPositionalArgument("program-file", QCoreApplication::translate("program-file", "Program file to run."));
     parser.process(application);
     const QStringList args = parser.positionalArguments();
-    // Position 0, if present,  should contain the full path to the ZX Spectrum program to run
+    // Position 0, if present, should contain the full path to the ZX Spectrum program to run
     const QString &programFile = args.value(0);
 
     auto *emulatorWindow = new ZxEmulatorWindow(programFile);

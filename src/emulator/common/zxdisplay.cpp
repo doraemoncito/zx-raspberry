@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 Jose Hernandez
+ * Copyright (c) 2020-2024 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -64,9 +64,11 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
     assert(m_pFrameBuffer != nullptr);
 
     /* Set up the colour palette definition in RGB565 format.
-     * Needs to be defined BEFORE the call to initialize the framebuffer.
+     * Needs to be defined BEFORE the call to initialise the framebuffer.
      */
-    for (unsigned long i = 0; i < (sizeof(m_palette)/sizeof(uint16_t)); i++) {
+    for (uint32_t i = 0; i < (sizeof(m_palette)/sizeof(uint16_t)); i++) {
+        CLogger::Get()->Write("[Display]", LogDebug,"Setting palette index %02d to '%s' (RGB565: 0x%04X)",
+                              i, m_paletteColourName[i], m_palette[i]);
         m_pFrameBuffer->SetPalette(i, m_palette[i]);
     }
 
@@ -82,29 +84,36 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
     std::memset(m_pBaseBuffer, static_cast<int>((m_border << 0x04u) | m_border), m_pFrameBuffer->GetSize());
 
     /*
-     * Create a pixel value lookup table for draw the screen Faster Than Light :)
-     * This section was adapted from sample code by José Luis Sanchez of ZX bare emulator fame.
+     * Create a pixel value lookup table to draw the screen as fast we possibly can. This section was adapted from
+     * sample code by José Luis Sanchez of ZXBaremulator (https://zxmini.speccy.org/en/index.html) fame.
      *
      * The attribute byte format is as follows:
      *
      *  | F | B | P2 | P1 | P0 | I2 | I1 | I0 |
      *
-     * F sets the attribute FLASH mode
+     * F sets the attribute FLASH mode where flashing is done by swapping the ink and paper colours
      * B sets the attribute BRIGHTNESS mode
      * P2 to P0 is the PAPER colour
      * I2 to I0 is the INK colour
      *
-     * The lookup table maps an attribute byte and a character (8 pixel) mask byte into a 32 bit value where each
-     * nibble represents a 4 bit depth pixel colour on screen. Obviously, if the colour depth was to change we would
-     * need to amend the way we create this lookup table.
+     * The lookup table maps an attribute byte and a character (8 pixel) mask byte into a 32-bit value where each
+     * nibble represents a 4-bit depth pixel colour on screen. If the colour depth was to change, we would need to
+     * amend the way we create this lookup table.
      *
-     * To look up a cached value we need to perform the following operation:
+     * To look up a cached value, we need to perform the following operation:
      *
      *      uint8_t colour = attribute & (flash) ? 0xFFu : 0x7Fu;
      *      uint32_t pixels = *m_pScrTable[colour][character];
      */
     m_pScrTable = reinterpret_cast<uint32_t (*)[256][256]>(new uint32_t[256 * 256]);
-    for (uint32_t attr = 0; attr < 128; attr++) {
+
+    /* Iterate over all the possible attribute values...
+     *
+     * We compute all the normal attributes (cache table position 0..127) followed by the flashed attributes
+     * (cache table position 128..255).
+     */
+    for (uint32_t attr = 0; attr < 256; attr++) {
+
         /* The ink and paper values are unpacked like this:
          *
          *  ink:   | F | B | P2 | P1 | P0 | I2 | I1 | I0 |  -->  | 0 | 0 | 0 | 0 | B | I2 | I1 | I0 |
@@ -112,28 +121,26 @@ bool ZxDisplay::Initialize(uint8_t *pVideoMem, CBcmFrameBuffer *pFrameBuffer) {
          */
         uint32_t ink = (attr & 0b01000000) >> 3 | (attr & 0b00000111);
         uint32_t paper = (attr & 0b01111000) >> 3;
-        /* We compute all the normal attributes (cache table position 0..127) followed by the flashed attributes
-         * (cache table position 128..255).
-         */
-        for (uint32_t flash = 0; flash <= 128; flash += 128) {
-            // Each 8 bit character mask can take on 256 possible values from 0 to 255.
-            for (uint32_t character = 0; character < 256; character++) {
-                /* Iterate over each of the 8 pixels in the character, shifting the target value by one nibble to the
-                 * left in each iteration. Then apply the ink or paper value to the rightmost nibble depending on
-                 * whether the character pixel is on or off.
-                 */
-                for (uint32_t mask = 0b10000000; mask > 0; mask >>= 1) {
-                    *m_pScrTable[attr + flash][character] <<= 4;
-                    *m_pScrTable[attr + flash][character] |= (character & mask) ? ink : paper;
-                }
-                // Swap the 32 bit cached value depending on whether the machine is big or little endian.
-                *m_pScrTable[attr + flash][character] = bswap32(*m_pScrTable[attr + flash][character]);
+        uint32_t flash = attr >> 7;
+
+        // Each 8-bit character mask can take on 256 possible values from 0 to 255.
+        for (uint32_t character = 0; character < 256; character++) {
+            /* Iterate over each of the 8 pixels in the character, shifting the target value by one nibble to the
+             * left in each iteration. Then apply the ink or paper value to the rightmost nibble depending on
+             * whether the character pixel is on or off.
+             */
+            for (uint32_t mask = 0b10000000; mask > 0; mask >>= 1) {
+                *m_pScrTable[attr][character] <<= 4;
+                *m_pScrTable[attr][character] |= flash ? ((character & mask) ? paper : ink) : ((character & mask) ? ink : paper);
             }
+            // Swap the 32 bit cached value depending on whether the machine is big or little endian.
+            *m_pScrTable[attr][character] = bswap32(*m_pScrTable[attr][character]);
         }
     }
 
-    /* Pre-compute the border fill word use to set 8 pixels (i.e. 4 bytes) at a time.  This is effectively 4 bytes
-     * where all 8 nibbles (4 bits) are identical.  The border colours do not use brightness.
+    /* Pre-compute the border fill value used to set 8 pixels (e.g. 4 bytes when working in 4-bit depth) at a time.
+     * This is effectively 4 bytes where all 8 nibbles (4 bits) are identical.
+     * Border colours do not use brightness.
      */
     for (uint8_t border = 0; border < 8; border++) {
         for (uint8_t nibble = 0; nibble < 8; nibble++) {
@@ -168,7 +175,7 @@ void ZxDisplay::update(bool flash) {
             m_bBufferSwapped = !m_bBufferSwapped;
         } else {
             m_pFrameBuffer->SetVirtualOffset(0, DISPLAY_HEIGHT);
-            // In non-vsync mode we just copy from the hidden buffer to the base buffer
+            // In non-vsync mode, we just copy from the hidden buffer to the base buffer
             memcpy(m_pBaseBuffer, m_pBuffer, (DISPLAY_WIDTH * DISPLAY_HEIGHT) / 2 /* 2 pixels per byte */);
         }
     }
@@ -182,7 +189,7 @@ void ZxDisplay::update(bool flash) {
 
     /*
      * Calculate the index into the frame buffer to perform fast translation of ZX Spectrum video memory to Raspberry Pi
-     * framebuffer memory.  The framebuffer pointer has 32 bits per element. e.g 8 pixels since each pixel takes 4 bits.
+     * framebuffer memory. The framebuffer pointer has 32 bits per element, e.g. 8 pixels since each pixel takes 4 bits.
      *
      *      48 lines * 352 pixels per line + 48 border pixels = 16944 pixels
      *      16944 pixels offset / 8 pixels per array element = 2118 array index = 0x0846 HEX
@@ -195,6 +202,18 @@ void ZxDisplay::update(bool flash) {
     static uint8_t flashMask[] = {0x7Fu, 0xFFu};
 
     updateBorder(m_border, m_lastBorderUpdate);
+
+    // BEGIN DEBUG (place a flashing checkered box in the top right corner of the spectrum video memory)
+//    uint32_t xblock = 0x0000;
+//    uint32_t xcolumn = 0x001F;
+//    uint32_t xrow = 0x0000;
+//    for (uint32_t xline = 0; xline < 8; xline++) {
+//        m_pVideoMem[xblock + xrow + xcolumn + xline * 0x0100] = flash
+//                ? ((xline % 2 == 0) ? 0xAA : 0x55)
+//                : ((xline % 2 == 0) ? 0x55 : 0xAA);
+//    }
+//    m_pVideoMem[attribute + xcolumn] = flash ? 0xAA : 0x55;
+    // END DEBUG
 
     // The ZX Spectrum screen is made up of 3 blocks of 2048 (0x0800) bytes each
     for (uint32_t block = 0x0000; block < 0x1800; block += 0x0800) {
@@ -209,6 +228,12 @@ void ZxDisplay::update(bool flash) {
         }
     }
 
+//    // BEGIN DEBUG
+//    auto label = new ZxLabel(ZxRect(1, 1, 1, 1), (flash ? "O" : "X"));
+//    label->draw(m_pTargetBuffer8);
+//    delete label;
+//    // END DEBUG
+
     if (m_pZxView != nullptr) {
         m_pZxView->draw(m_pTargetBuffer8);
     }
@@ -221,12 +246,12 @@ void ZxDisplay::update(bool flash) {
  * Each full line on the display takes 224 T-states to draw, where each line can be broken into the following
  * substates:
  *
- *      128 T-states to draw the 256 screen pixels
+ *      128 T-states to draw 256 screen pixels
  *       24 T-states to draw the 48 right border pixels
  *       48 T-states for the horizontal retrace
  *       24 T-states to draw the 48 left border pixels
  *
- * Each complete ZX spectrum screen has 312 lines divided into:
+ * Each complete ZX Spectrum screen has 312 lines divided into:
  *
  *       16 lines to allow the electron beam to return to the top of the screen
  *       48 lines for the top border
@@ -237,15 +262,15 @@ void ZxDisplay::updateBorder(uint8_t border, uint32_t tstates) {
 
 //    CLogger::Get()->Write("[Display]", LogDebug,
 //                          "(update border #1) m_lastBorderChange: %5d; T-states: %5d; portFE: %d (%s)",
-//                          m_lastBorderChange, tstates, m_border, m_borderColourName[m_border & 0x07],
-//                          tstates, border, m_borderColourName[border & 0x07]);
+//                          m_lastBorderChange, tstates, m_border, m_paletteColourName[m_border & 0x07],
+//                          tstates, border, m_paletteColourName[border & 0x07]);
 
     if ((tstates >= m_lastBorderChange) && (m_lastBorderChange <= m_lastBorderUpdate)) {
 
 //        CLogger::Get()->Write("[Display]", LogDebug,
 //                              "(update border #2) m_lastBorderChange: %5d; T-states: %5d; portFE: %d (%s)",
-//                              m_lastBorderChange, tstates, m_border, m_borderColourName[m_border & 0x07],
-//                              tstates, border, m_borderColourName[border & 0x07]);
+//                              m_lastBorderChange, tstates, m_border, m_paletteColourName[m_border & 0x07],
+//                              tstates, border, m_paletteColourName[border & 0x07]);
 
         auto clock = Clock::getInstance();
 
@@ -256,7 +281,7 @@ void ZxDisplay::updateBorder(uint8_t border, uint32_t tstates) {
             uint32_t row = offset / clock.getTstatesPerScreenLine();
             uint32_t col = offset % clock.getTstatesPerScreenLine();
 
-            //CLogger::Get()->Write("[ZxDisplay]", LogDebug,"[BORDER] row: %3d, column: %3d, border: 0x%02X, colour: %-14s", row, col, m_border, m_borderColourName[border]);
+            //CLogger::Get()->Write("[ZxDisplay]", LogDebug,"[BORDER] row: %3d, column: %3d, border: 0x%02X, colour: %-14s", row, col, m_border, m_paletteColourName[border]);
 
             /*
              * Determine whether the current T-state falls within the border area and paint it using the cached border

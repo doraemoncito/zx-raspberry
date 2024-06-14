@@ -237,11 +237,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
     # what you are doing.
     set(
             LIBS
-            "${NEWLIBDIR}/lib/libcirclenewlib.a"
-            "${NEWLIBDIR}/lib/libc.a"
-            "${NEWLIBDIR}/lib/libg.a"
-            "${NEWLIBDIR}/lib/libm.a"
-            "${NEWLIBDIR}/lib/libnosys.a"
             "${CIRCLEHOME}/addon/SDCard/libsdcard.a"
 #            "${CIRCLEHOME}/lib/bt/libbluetooth.a"
             "${CIRCLEHOME}/lib/fs/fat/libfatfs.a"
@@ -251,6 +246,11 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Generic")
             "${CIRCLEHOME}/lib/net/libnet.a"
             "${CIRCLEHOME}/lib/sched/libsched.a"
             "${CIRCLEHOME}/lib/usb/libusb.a"
+            "${NEWLIBDIR}/lib/libcirclenewlib.a"
+            "${NEWLIBDIR}/lib/libc.a"
+            "${NEWLIBDIR}/lib/libg.a"
+            "${NEWLIBDIR}/lib/libm.a"
+            "${NEWLIBDIR}/lib/libnosys.a"
             ${EXTRA_LIBS}
     )
 

@@ -5,6 +5,8 @@
 #include "common/ViajeAlCentroDeLaTierraScr.h"
 #include "screen.h"
 #include "zx48k_rom.h"
+#include "common/clock.h"
+#include "common/hardware/zxhardwaremodel48k.h"
 
 int scale = 2;
 
@@ -15,7 +17,10 @@ Screen::Screen(QWidget *parent) : QWidget(parent)
     setAutoFillBackground(true);
     bcmFrameBuffer = new CBcmFrameBuffer(352, 272, 4);
     m_zxDisplay.Initialize(ViajeAlCentroDeLaTierra_scr, bcmFrameBuffer);
+    m_model = new ZxHardwareModel48k();
+    Clock::getInstance().setSpectrumModel(m_model);
 }
+
 
 QSize Screen::minimumSizeHint() const
 {

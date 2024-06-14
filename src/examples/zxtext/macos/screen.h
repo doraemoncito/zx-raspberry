@@ -7,6 +7,7 @@
 #include "common/zxdisplay.h"
 
 class CBcmFrameBuffer;
+class ZxHardwareModel;
 
 class Screen : public QWidget
 {
@@ -35,7 +36,9 @@ private:
     // Raspberry Pi framebuffer image
     QImage raspberryPiImage = QImage(352, 272, QImage::Format_RGB32);
 
+    ZxHardwareModel *m_model;
     CBcmFrameBuffer *bcmFrameBuffer = nullptr;
+
 };
 
 

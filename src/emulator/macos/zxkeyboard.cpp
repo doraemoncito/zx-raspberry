@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022 Jose Hernandez
+ * Copyright (c) 2020-2024 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -24,20 +24,20 @@
 #include <QtDebug>
 #include <QKeyEvent>
 
-/* Using shift keys and a combination of modes the Spectrum 40-key keyboard can be mapped to 256 input characters
+/* Using shift keys and a combination of modes, the Spectrum 40-key keyboard can be mapped to 256 input characters
  *
  * ---------------------------------------------------------------------------
  *
- *         0     1     2     3     4 -Bits-  4     3     2     1     0
- * PORT                                                                    PORT
+ *          0     1     2     3     4 -Bits-  4     3     2     1     0
+ * PORT                                                                     PORT
  *
- * F7FE  [ 1 ] [ 2 ] [ 3 ] [ 4 ] [ 5 ]  |  [ 6 ] [ 7 ] [ 8 ] [ 9 ] [ 0 ]   EFFE
- *  ^                                   |                                   v
- * FBFE  [ Q ] [ W ] [ E ] [ R ] [ T ]  |  [ Y ] [ U ] [ I ] [ O ] [ P ]   DFFE
- *  ^                                   |                                   v
- * FDFE  [ A ] [ S ] [ D ] [ F ] [ G ]  |  [ H ] [ J ] [ K ] [ L ] [ ENT ] BFFE
- *  ^                                   |                                   v
- * FEFE  [SHI] [ Z ] [ X ] [ C ] [ V ]  |  [ B ] [ N ] [ M ] [sym] [ SPC ] 7FFE
+ * F7FE   [ 1 ] [ 2 ] [ 3 ] [ 4 ] [ 5 ]  |  [ 6 ] [ 7 ] [ 8 ] [ 9 ] [ 0 ]   EFFE
+ *  ^                                    |                                   v
+ * FBFE   [ Q ] [ W ] [ E ] [ R ] [ T ]  |  [ Y ] [ U ] [ I ] [ O ] [ P ]   DFFE
+ *  ^                                    |                                   v
+ * FDFE   [ A ] [ S ] [ D ] [ F ] [ G ]  |  [ H ] [ J ] [ K ] [ L ] [ ENT ] BFFE
+ *  ^                                    |                                   v
+ * FEFE  [ CS ] [ Z ] [ X ] [ C ] [ V ]  |  [ B ] [ N ] [ M ] [sym] [ SPC ] 7FFE
  *  ^     $27                                                 $18           v
  * Start                                                                   End
  *        00100111                                            00011000
@@ -62,20 +62,29 @@ void ZxKeyboard::keyPressEvent(Z80emu &zxRaspberry, QKeyEvent &event) {
     uint8_t port_BFFE = 0xFFu;
     uint8_t port_7FFE = 0xFFu;
 
-    qDebug() << "Received keyboard event" << &event;
+//    qDebug() << "Received key press event" << &event;
 
+    // Modifier keys pressed on their own
     switch (event.key()) {
-        case Qt::Key_Shift: // Left shift key -> CAPS SHIFT
-        // case 0x20: // Right shift key -> CAPS SHIFT
+        case Qt::Key_Shift:         // Left shift key -> CAPS SHIFT
             port_FEFE &= KEY_PRESSED_BIT0;
             break;
-        case Qt::Key_Control: // Left control key -> SYMBOL SHIFT
-        // case 0x10: // Right control key -> SYMBOL SHIFT
-        case Qt::Key_Alt: // Alt -> SYMBOL SHIFT
-        case Qt::Key_AltGr: // Alt Gr -> SYMBOL SHIFT
+        case Qt::Key_Control:       // Command key -> SYMBOL SHIFT
+        case Qt::Key_Meta:          // Control key -> SYMBOL SHIFT
+        case Qt::Key_Alt:           // Option key -> SYMBOL SHIFT
+        case Qt::Key_AltGr:         // Alt Gr -> SYMBOL SHIFT
             port_7FFE &= KEY_PRESSED_BIT1;
             break;
     }
+
+    // Key modifiers when used in combination with other keys
+    Qt::KeyboardModifiers modifiers = event.modifiers();
+
+   if (modifiers & Qt::ShiftModifier)
+       port_FEFE &= KEY_PRESSED_BIT0;
+
+   if ((modifiers & Qt::ControlModifier) || (modifiers & Qt::AltModifier) || (modifiers & Qt::MetaModifier))
+       port_7FFE &= KEY_PRESSED_BIT1;
 
     switch (event.key()) {
         // row 0xF7FE
@@ -91,17 +100,21 @@ void ZxKeyboard::keyPressEvent(Z80emu &zxRaspberry, QKeyEvent &event) {
         case Qt::Key_4: // 4
             port_F7FE &= KEY_PRESSED_BIT3;
             break;
+        case Qt::Key_Left:
         case Qt::Key_5: // 5 (left)
             port_F7FE &= KEY_PRESSED_BIT4;
             break;
 
         // row 0xEFFE
+        case Qt::Key_Down:
         case Qt::Key_6: // 6 (down)
             port_EFFE &= KEY_PRESSED_BIT4;
             break;
+        case Qt::Key_Up:
         case Qt::Key_7: // 7 (up)
             port_EFFE &= KEY_PRESSED_BIT3;
             break;
+        case Qt::Key_Right:
         case Qt::Key_8: // 8 (right)
             port_EFFE &= KEY_PRESSED_BIT2;
             break;
@@ -176,6 +189,7 @@ void ZxKeyboard::keyPressEvent(Z80emu &zxRaspberry, QKeyEvent &event) {
         case Qt::Key_L: // L
             port_BFFE &= KEY_PRESSED_BIT1;
             break;
+        case Qt::Key_Return:
         case Qt::Key_Enter: // ENTER
             port_BFFE &= KEY_PRESSED_BIT0;
             break;
@@ -209,6 +223,30 @@ void ZxKeyboard::keyPressEvent(Z80emu &zxRaspberry, QKeyEvent &event) {
             port_7FFE &= KEY_PRESSED_BIT0;
             break;
     }
+
+    zxRaspberry.internalOutPort(0xF7FE, port_F7FE);
+    zxRaspberry.internalOutPort(0xFBFE, port_FBFE);
+    zxRaspberry.internalOutPort(0xFDFE, port_FDFE);
+    zxRaspberry.internalOutPort(0xFEFE, port_FEFE);
+    zxRaspberry.internalOutPort(0xEFFE, port_EFFE);
+    zxRaspberry.internalOutPort(0xDFFE, port_DFFE);
+    zxRaspberry.internalOutPort(0xBFFE, port_BFFE);
+    zxRaspberry.internalOutPort(0x7FFE, port_7FFE);
+}
+
+
+void ZxKeyboard::keyReleaseEvent(Z80emu &zxRaspberry, QKeyEvent &) {
+
+    uint8_t port_F7FE = 0xFFu;
+    uint8_t port_FBFE = 0xFFu;
+    uint8_t port_FDFE = 0xFFu;
+    uint8_t port_FEFE = 0xFFu;
+    uint8_t port_EFFE = 0xFFu;
+    uint8_t port_DFFE = 0xFFu;
+    uint8_t port_BFFE = 0xFFu;
+    uint8_t port_7FFE = 0xFFu;
+
+//    qDebug() << "Received key release event" << &event;
 
     zxRaspberry.internalOutPort(0xF7FE, port_F7FE);
     zxRaspberry.internalOutPort(0xFBFE, port_FBFE);

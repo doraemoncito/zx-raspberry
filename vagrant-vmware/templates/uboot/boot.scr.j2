@@ -1,0 +1,47 @@
+#echo ===== Configuring ethernet over USB =====
+#usb start
+#setenv usbnet_devaddr f8:dc:7a:00:00:02
+#setenv usbnet_hostaddr f8:dc:7a:00:00:01
+#setenv ethact usb_ether
+#printenv usbnet_devaddr
+#printenv usbnet_hostaddr
+#printenv ethact
+echo ===== Configuring DHCP =====
+# Disable autoload to prevent dhcp from automatically downloading a kernel image from an autoconfigured server
+setenv autoload no
+setenv autostart no
+printenv autoload
+printenv autostart
+dhcp
+echo ===== Configuring U-Boot =====
+setenv hostname uboot
+setenv netmask 255.255.255.0
+setenv serverip 192.168.1.10
+setenv gatewayip 192.168.2.2
+setenv ipaddr 192.168.2.3
+setenv dnsip 192.168.1.254
+setenv bootfile zxraspberry.uimg
+# NOTE: on Raspberry Pi 1, the code must be loaded to memory location 0x8000.
+# On Raspberry Pi 4, the code must be loaded to memory location 0x80000
+setenv loadaddr 0x80000
+setenv baudrate 115200
+printenv hostname
+printenv netmask
+printenv serverip
+printenv gatewayip
+printenv ipaddr
+printenv dnsip
+printenv bootfile
+printenv loadaddr
+printenv baudrate
+echo ===== Downloading ZX Raspberry U-Boot kernel image =====
+setenv autoload yes
+setenv autostart yes
+printenv autoload
+printenv autostart
+# NOTE: on Raspberry Pi 1, the code must be loaded to memory location 0x8000.
+# On Raspberry Pi 4, the code must be loaded to memory location 0x80000
+tftp 0x80000 zxraspberry.uimg
+#echo ===== Running ZX Raspberry kernel =====
+#bootm 0x80000
+echo ===== Done =====

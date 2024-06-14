@@ -28,22 +28,17 @@
 #include <QtDebug>
 
 
-uint8_t scale = 3;
-bool flash = false;
-uint32_t frameCounter = 0;
-
-
 ZxEmulatorScreen::ZxEmulatorScreen(Z80emu *z80emu, ZxDisplay *pZxDisplay, QWidget *parent) :
-    QWidget(parent),
-    m_z80emu(z80emu),
-    m_pZxDisplay(pZxDisplay)
+        QWidget(parent),
+        m_pZ80emu(z80emu),
+        m_pZxDisplay(pZxDisplay)
 {
-    antiAliased = false;
+    m_antiAliased = false;
     setBackgroundRole(QPalette::Base);
     setAutoFillBackground(true);
     m_pBcmFrameBuffer = new CBcmFrameBuffer(ZxDisplay::DISPLAY_WIDTH, ZxDisplay::DISPLAY_HEIGHT, ZxDisplay::COLOUR_DEPTH);
-    m_pZxDisplay->Initialize(&m_z80emu->getRam()[0x4000], m_pBcmFrameBuffer);
-    m_zxKeyboard = new ZxKeyboard();
+    m_pZxDisplay->Initialize(&m_pZ80emu->getRam()[0x4000], m_pBcmFrameBuffer);
+    m_pZxKeyboard = new ZxKeyboard();
 
     // Set the focus on this widget so that we can get keyboard events
     setFocus();
@@ -51,15 +46,15 @@ ZxEmulatorScreen::ZxEmulatorScreen(Z80emu *z80emu, ZxDisplay *pZxDisplay, QWidge
 
 ZxEmulatorScreen::~ZxEmulatorScreen() {
 
-    delete m_zxKeyboard;
+    delete m_pZxKeyboard;
 }
 
 
 QSize ZxEmulatorScreen::minimumSizeHint() const {
 
     return {
-        static_cast<int>(scale * ZxDisplay::DISPLAY_WIDTH) ,
-        static_cast<int>(scale * ZxDisplay::DISPLAY_HEIGHT)
+        static_cast<int>(m_scale * ZxDisplay::DISPLAY_WIDTH) ,
+        static_cast<int>(m_scale * ZxDisplay::DISPLAY_HEIGHT)
     };
 }
 
@@ -67,8 +62,8 @@ QSize ZxEmulatorScreen::minimumSizeHint() const {
 QSize ZxEmulatorScreen::sizeHint() const {
 
     return {
-        static_cast<int>(scale * ZxDisplay::DISPLAY_WIDTH) ,
-        static_cast<int>(scale * ZxDisplay::DISPLAY_HEIGHT)
+        static_cast<int>(m_scale * ZxDisplay::DISPLAY_WIDTH) ,
+        static_cast<int>(m_scale * ZxDisplay::DISPLAY_HEIGHT)
     };
 }
 
@@ -76,30 +71,36 @@ QSize ZxEmulatorScreen::sizeHint() const {
 void ZxEmulatorScreen::keyPressEvent(QKeyEvent *event) {
 
     if (event->key() == Qt::Key_F1) {
-        showDialog = !showDialog;
-        qDebug() << ((showDialog) ? "Showing About box" : "Hiding about box");
+        m_showDialog = !m_showDialog;
+        qDebug() << ((m_showDialog) ? "Showing About box" : "Hiding about box");
         repaint();
     }
     else {
-        m_zxKeyboard->keyPressEvent(*m_z80emu, *event);
+        m_pZxKeyboard->keyPressEvent(*m_pZ80emu, *event);
     }
+}
+
+
+void ZxEmulatorScreen::keyReleaseEvent(QKeyEvent *event) {
+
+    m_pZxKeyboard->keyReleaseEvent(*m_pZ80emu, *event);
 }
 
 
 void ZxEmulatorScreen::paintEvent(QPaintEvent * /* event */) {
 
     QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing, antiAliased);
+    painter.setRenderHint(QPainter::Antialiasing, m_antiAliased);
     painter.save();
 
     // The flash changes state every 16 screen frames
-    if (++frameCounter % 16 == 0) {
-        flash = !flash;
+    if (++m_frameCounter % 16 == 0) {
+        m_flash = !m_flash;
     }
 
-    m_pZxDisplay->update(flash);
+    m_pZxDisplay->update(m_flash);
 
-    if (showDialog) {
+    if (m_showDialog) {
         auto zxDialog = ZxDialog(ZxRect(2, 12, 40, 10), "About ZX Raspberry");
 
         /*
@@ -117,7 +118,7 @@ void ZxEmulatorScreen::paintEvent(QPaintEvent * /* event */) {
          * Reference: https://enacademic.com/dic.nsf/enwiki/513468
          */
         zxDialog.insert(new ZxLabel(ZxRect(1, 2, 1, 1), "ZX Raspberry version 0.0.1"));
-        zxDialog.insert(new ZxLabel(ZxRect(1, 3, 1, 1), "Copyright \x7F 2020-2023 Jose Hernandez"));
+        zxDialog.insert(new ZxLabel(ZxRect(1, 3, 1, 1), "Copyright \x7F 2020-2024 Jose Hernandez"));
         zxDialog.insert(new ZxLabel(ZxRect(1, 6, 1, 1), "Build date: " __DATE__ " " __TIME__));
 
         zxDialog.draw(reinterpret_cast<uint8_t *>(m_pBcmFrameBuffer->GetBuffer()));
@@ -152,7 +153,7 @@ void ZxEmulatorScreen::paintEvent(QPaintEvent * /* event */) {
 #endif
 
     // http://www.zxdesign.info/vidparam.shtml
-    painter.drawImage(QRect(0, 0, static_cast<int>(scale * 352), static_cast<int>(scale * 296)), image);
+    painter.drawImage(QRect(0, 0, static_cast<int>(m_scale * 352), static_cast<int>(m_scale * 296)), image);
 
     painter.restore();
     painter.setRenderHint(QPainter::Antialiasing, false);

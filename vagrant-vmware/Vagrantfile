@@ -1,0 +1,125 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Create a virtual machine to Cross-compile the code for Raspberry Pi.
+
+IMAGE_NAME = "bento/ubuntu-20.04"
+MACHINE_NAME = "raspberry-pi-cross-compiler"
+
+# All the Vagrant configuration is done below. The number "2" in the Vagrant.configure
+# statement configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what you're doing.
+Vagrant.configure("2") do |config|
+
+    config.vm.provider "vmware_desktop"
+    config.vm.hostname = MACHINE_NAME
+
+    # Share the root folder of the project with the virtual machine
+    config.vm.synced_folder "../", "/home/vagrant/zx-raspberry"
+
+    # Enable ssh forward agent
+    config.ssh.forward_agent = true
+
+    config.vm.define MACHINE_NAME do |node|
+
+        node.vm.box = IMAGE_NAME
+        node.vm.hostname = MACHINE_NAME
+
+        # node.vm.network "private_network", ip: "192.168.1.10"
+        # node.vm.network "public_network", bridge: 'en0: Wi-Fi (Wireless)', ip: "192.168.1.10"
+        node.vm.network "public_network", ip: "192.168.1.10", type: "dhcp", subnet: "192.168.1.0/24", hostname: true
+
+        node.vm.provider "vmware_desktop" do |v|
+            v.gui = true
+            v.vmx["memsize"] = "8192"
+            v.vmx["numvcpus"] = "4"
+            v.base_mac = "00:0C:29:73:B1:FE"
+            #v.base_address = "192.168.1.10"
+            #v.enable_vmrun_ip_lookup = false
+            #v.vmx["ethernet0.address"] = "00:0C:29:73:B1:FE"
+            #v.vmx["ethernet0.addresstype"] = "static"
+            #v.vmx["ethernet0.connectiontype"] = "bridged"
+            #v.vmx["ethernet0.present"] = "TRUE"
+            #v.vmx["ethernet0.vnet"] = "vmnet9"
+            #v.vmx["ethernet0.displayName"] = "TFTP"
+        end
+
+        # Set the environment variable DEBIAN_FRONTEND to "noninteractive" to prevent debconf from trying to open stdin.
+        # https://stackoverflow.com/questions/47408174/vagrant-provision-dpkg-preconfigure-unable-to-re-open-stdin
+        node.vm.provision "shell", inline: <<-SHELL
+            export DEBIAN_FRONTEND=noninteractive
+            sudo apt-get update
+            # Allow SSH with passwords
+            apt-get -y install sshpass
+            sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+            systemctl restart sshd
+        SHELL
+
+        node.vm.provision "shell" do |s|
+            ssh_prv_key = ""
+            ssh_pub_key = ""
+
+            if File.file?("#{Dir.home}/.ssh/id_rsa")
+                # ssh_prv_key = File.read("#{Dir.home}/.ssh/id_rsa")
+                ssh_pub_key = File.readlines("#{Dir.home}/.ssh/id_rsa.pub").first.strip
+            else
+                puts "No SSH key found. You will need to remedy this before pushing to the repository."
+            end
+
+            s.inline = <<-SHELL
+                if grep -sq "#{ssh_pub_key}" /home/vagrant/.ssh/authorized_keys; then
+                    echo "SSH keys already provisioned."
+                    exit 0;
+                fi
+
+                echo "SSH key provisioning."
+                mkdir -p /home/vagrant/.ssh/
+                touch /home/vagrant/.ssh/authorized_keys
+                echo #{ssh_pub_key} >> /home/vagrant/.ssh/authorized_keys
+                echo #{ssh_pub_key} > /home/vagrant/.ssh/id_rsa.pub
+                chmod 644 /home/vagrant/.ssh/id_rsa.pub
+                # echo "#{ssh_prv_key}" > /home/vagrant/.ssh/id_rsa
+                # chmod 600 /home/vagrant/.ssh/id_rsa
+                # chown -R vagrant:vagrant /home/vagrant
+                exit 0
+            SHELL
+        end
+
+        # https://github.com/hashicorp/vagrant/issues/10914
+        # https://bugs.launchpad.net/ubuntu/+source/ansible/+bug/1833013
+        # https://serverfault.com/questions/500764/dpkg-reconfigure-unable-to-re-open-stdin-no-file-or-directory
+#         node.vm.provision "shell",
+#           inline:
+#             "export LANGUAGE=en_US.UTF-8 && "\
+#             "export LANG=en_US.UTF-8 && "\
+#             "export LC_ALL=en_US.UTF-8 && "\
+#             "locale-gen en_US.UTF-8 && "\
+#             "dpkg-reconfigure locales && "\
+#             "sudo apt-get update -y -qq && "\
+#             "sudo dpkg-reconfigure libc6 && "\
+#             "export DEBIAN_FRONTEND=noninteractive && "\
+#             "sudo -E apt-get -q --option \"Dpkg::Options::=--force-confold\" --assume-yes install libssl1.1"
+
+#         node.vm.provision "shell",
+#           inline: "sudo apt-get update -y -qq && "\
+#             "sudo dpkg-reconfigure libc6 && "\
+#             "export DEBIAN_FRONTEND=noninteractive && "\
+#             "sudo -E apt-get -q --option \"Dpkg::Options::=--force-confold\" --assume-yes install libssl1.1"
+
+        node.vm.provision "shell",
+          inline: "sudo apt-get update -y -qq && "\
+            "export DEBIAN_FRONTEND=noninteractive && "\
+            "sudo apt-get install -y -qq ansible"
+
+        node.vm.provision "ansible_local" do |ansible|
+            compatibility_mode = "2.0"
+            ansible.playbook = 'provision.yml'
+            ansible.inventory_path = 'hosts'
+            ansible.limit = 'all'
+            ansible.verbose = true
+            ansible.install = false
+            ansible.install_mode = 'default'
+        end
+    end
+
+end

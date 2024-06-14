@@ -72,7 +72,7 @@
           # - balena-etcher-electron
           - autoconf
           - libtool
-          # ntpdate is need to update the time on the vagrant built machine when if falls
+          # ntpdate is needed to update the time on the vagrant built machine when if falls
           # out of sync with the host. e.g. `sudo ntpdate time.nist.gov`
           - ntpdate
           # Required to be able to run `ccmake` to edit CMakefiles
@@ -99,13 +99,14 @@
           # Desktop environment
           - ubuntu-desktop
           # Desktop resizing support
-          - virtualbox-guest-dkms
-          - virtualbox-guest-utils
-          - virtualbox-guest-x11
+#          - virtualbox-guest-dkms
+#          - virtualbox-guest-utils
+#          - virtualbox-guest-x11
           - firefox
           # [sigrok signal analyser](https://sigrok.org)
           - sigrok-firmware-fx2lafw
           - pulseview
+          - xrdp
         state: latest
         force_apt_get: True
 
@@ -316,15 +317,16 @@
     # configuration respectively.
     - name: "Changing the working directory to '{{ circle_stdlib_dest_dir }}/' and run configure if the library has not been built previously"
       become: no
-      command: ./configure --raspberrypi 4 --prefix arm-none-eabi-
+      command: ./configure --raspberrypi 4 --prefix arm-none-eabi- --option KERNEL_STACK_SIZE=0x100000
+
 #        argv:
-          # (DEPRECATED) Raspberry Pi 1 command Line: CROSS_COMPILE=arm-eabi- ./configure --raspberrypi 1 --prefix arm-eabi- CROSS_COMPILE=arm-eabi-
+# (DEPRECATED) Raspberry Pi 1 command Line: CROSS_COMPILE=arm-eabi- ./configure --raspberrypi 1 --prefix arm-eabi- CROSS_COMPILE=arm-eabi-
 #          - "./configure"
 #          - "--raspberrypi"
 #          - "1"
 #          - "--prefix"
 #          - "arm-eabi-"
-          # Raspberry Pi 4 command Line: CROSS_COMPILE=arm-none-eabi- ./configure --raspberrypi 4 --prefix arm-none-eabi- CROSS_COMPILE=arm-none-eabi-
+# Raspberry Pi 4 command Line: CROSS_COMPILE=arm-none-eabi- ./configure --raspberrypi 4 --prefix arm-none-eabi- CROSS_COMPILE=arm-none-eabi-
 #          - "./configure"
 #          - "--raspberrypi"
 #          - "4"
@@ -364,6 +366,8 @@
         creates: "{{ circle_dest_dir }}/boot/bcm2711-rpi-4-b.dtb"
 
     # Build the Circle library
+    # configure with:
+    # ./configure --raspberrypi 4 --prefix arm-none-eabi- --define KERNEL_STACK_SIZE=0x100000 --define AARCH=32 --c++17 --multicore --force
     - name: "Changing the working directory to '{{ circle_dest_dir }}' and run the makeall if the kernel has not been built previously"
       command: ./makeall
       become: no

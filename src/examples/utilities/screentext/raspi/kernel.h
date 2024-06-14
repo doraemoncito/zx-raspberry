@@ -49,12 +49,12 @@ public:
 private:
 	// do not change this order
 	CMemorySystem		m_Memory;
-	CActLED			m_ActLED;
+	CActLED				m_ActLED;
 	CKernelOptions		m_Options;
 	CDeviceNameService	m_DeviceNameService;
 	CScreenDevice		m_Screen;
 	CSerialDevice		m_Serial;
-	CLogger			m_Logger;
+	CLogger				m_Logger;
 };
 
 #endif

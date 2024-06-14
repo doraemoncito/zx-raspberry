@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2023 Jose Hernandez
+ * Copyright (c) 2020-2024 Jose Hernandez
  *
  * This file is part of ZxRaspberry.
  *
@@ -32,7 +32,7 @@ class ZxEmulatorWindow : public QWidget {
 Q_OBJECT
 
 public:
-    ZxEmulatorWindow(QString programFile);
+    explicit ZxEmulatorWindow(QString programFile);
     ~ZxEmulatorWindow() override;
 
 private slots:
@@ -43,10 +43,10 @@ protected:
 
 private:
     ZxDisplay *m_pZxDisplay;
-    ZxEmulatorScreen *m_screen;
+    ZxEmulatorScreen *m_pScreen;
     QTimer *m_timer;
     ZxHardwareModel *m_model;
-    Z80emu *m_z80emu;
+    Z80emu *m_pZ80emu;
     QString m_programFile;
 
     void execute();

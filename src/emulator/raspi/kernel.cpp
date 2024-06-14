@@ -35,8 +35,8 @@
 //#include "fpga48all_sna.h"
 //#include "testkeys_sna.h"
 //#include "overscan_sna.h"
-//#include "automania_sna.h"
-#include "aquaplane_sna.h"
+#include "automania_sna.h"
+//#include "aquaplane_sna.h"
 //#include "shock_sna.h"
 #include "kernel.h"
 #include "Z80emu.h"
@@ -89,7 +89,7 @@ bool CKernel::Initialize() {
     m_Logger.Write(FromKernel, LogNotice, R"(                             |_|                         |___/ )");
     m_Logger.Write(FromKernel, LogNotice, " ");
     m_Logger.Write(FromKernel, LogNotice, "ZX Raspberry: a bare metal Sinclair ZX Spectrum emulator for Raspberry Pi");
-    m_Logger.Write(FromKernel, LogNotice, "Copyright (c) 2020-2023 Jose Hernandez");
+    m_Logger.Write(FromKernel, LogNotice, "Copyright (c) 2020-2024 Jose Hernandez");
     m_Logger.Write(FromKernel, LogNotice, "Build date: " __DATE__ " " __TIME__);
 
     if (bOK) {
@@ -211,10 +211,10 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
 
     m_Logger.Write(FromKernel, LogNotice, "Loading game in SNA format");
 //    z80emu->loadSnapshot(shock_sna, shock_sna_len);
-    z80emu->loadSnapshot(aquaplane_sna, aquaplane_sna_len);
+//    z80emu->loadSnapshot(aquaplane_sna, aquaplane_sna_len);
 //    z80emu->loadSnapshot(overscan_sna, overscan_sna_len);
 //    z80emu->loadSnapshot(test_2scrn_y_ay8192_sna, test_2scrn_y_ay8192_sna_len);
-//    z80emu->loadSnapshot(automania_sna, automania_sna_len);
+    z80emu->loadSnapshot(automania_sna, automania_sna_len);
 //    z80emu->loadSnapshot(testkeys_sna, testkeys_sna_len);
 //    z80emu->loadSnapshot(fpga48all_sna, fpga48all_sna_len);
 
@@ -228,7 +228,7 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
     m_Logger.Write(FromKernel, LogNotice, "Host CPU clock ticks per microsecond: %u", clockRate / 1000000);
 
     bool flash = false;
-    unsigned int frameCounter = 0;
+    uint32_t frameCounter = 0;
     step = 0;
 
     std::unique_ptr<ZxUla> zxUla(new ZxUla(*z80emu, *m_pFrameBuffer));
@@ -239,9 +239,9 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
     m_Logger.Write(FromKernel, LogNotice, "T-states per frame: %u", spectrumModel->tStatesPerScreenFrame());
 #endif // DEBUG
 
-    while (ShutdownNone == m_ShutdownMode) {
+    while (m_ShutdownMode == ShutdownNone) {
 //#ifdef DEBUG
-//        m_Logger.Write(FromKernel, LogNotice, "Running CPU instructions");
+//        m_Logger.Write(FromKernel, LogNotice, "Running CPU instructions. Frame: %d", frameCounter);
 //#endif // DEBUG
 
         /* Flash the Raspberry Pi LED on and off following the ZX Spectrum attribute flash cycle. This will give a
@@ -272,7 +272,7 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
          * https://retrocomputing.stackexchange.com/questions/12832/zx-spectrum-what-is-the-t-state-value-with-reference-to-sound
          *
          * https://fms.komkon.org/EMUL8/HOWTO.html#LABHB
-         * Execute a frame worth of T-States (i.e. ZX spectrum clock cycles)
+         * Execute a frame worth of T-States (i.e. ZX Spectrum clock cycles)
          *
          * 128K ZX Spectrum has 70908 T states per frame of which 228 will be used by the ULA to draw the screen.
          * In addition to this, the target T states we also need to add deficit or remove any excess T states from the previous frame.
@@ -287,13 +287,13 @@ unsigned clockTicksToMicroSeconds(unsigned ticks) {
         zxUla->refreshGamepad(DEVICE_INDEX + 1, m_GamePadState);
         zxUla->refreshDone();
 
-//        zxUla->scanLineReset();
+        zxUla->scanLineReset();
 
 //        while (step < BITMAP_DATA_SIZE) {
 //            z80emu->run(stepStates[step]);
 //            if (Clock::getInstance().getTstates() >= nextEvent) {
 //                nextEvent = step < stepStates.length ? stepStates[step] : NO_EVENT;
-////                updateBorder(Clock::getInstance().getTstates());
+//                m_pZxDisplay->updateBorder(Clock::getInstance().getTstates());
 //            }
 //        }
 

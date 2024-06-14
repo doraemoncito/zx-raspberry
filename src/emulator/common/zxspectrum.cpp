@@ -20,9 +20,9 @@
 #include "zxspectrum.h"
 
 
-void ZxSpectrum::run() {
+[[noreturn]] void ZxSpectrum::run() {
 
-    while (1) {
+    while (true) {
         generateFrame();
         drawFrame();
     }

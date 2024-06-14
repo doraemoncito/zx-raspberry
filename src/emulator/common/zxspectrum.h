@@ -24,7 +24,7 @@
 class ZxSpectrum {
 
 public:
-    void run();
+    [[noreturn]] void run();
 
 private:
     void generateFrame();
